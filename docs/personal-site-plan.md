@@ -1,6 +1,6 @@
 # Personal Website — Planning Doc
 
-**Goal:** A recruiter-credible but personality-forward personal site. Software-heavy with a creative streak — should feel arty and interactive, not like a templated portfolio. Built on Cloudflare (hosting already exists, not yet configured).
+**Goal:** A professional portfolio that serves as a personality-forward personal site. Software-heavy with a creative streak — should feel arty and interactive, not like a templated portfolio. Built on Cloudflare (hosting already exists, not yet configured).
 
 ---
 
