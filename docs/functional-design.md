@@ -1,12 +1,14 @@
-# Personal Website — Planning Doc
+# Personal Website — Functional Design
 
 **Goal:** A professional portfolio that serves as a personality-forward personal site. Software-heavy with a creative streak — should feel arty and interactive, not like a templated portfolio. Built on Cloudflare (hosting already exists, not yet configured).
+
+*This doc is the functional design: what the site is and how it behaves. All technical decisions — stack, architecture, backend, build order — live in [tech-stack.md](tech-stack.md).*
 
 ---
 
 ## Site Structure & Concept
 
-**Major pivot (locked):** the site opens on a **single wide outdoor coastal-hills scene** — the Hero — rather than a stacked-sections scroll from the start. Everything in the scene is visible at once (no hidden/hunted-for objects); each landmark is a direct entry point into a section. Once inside a section, the site still uses continuous camera-driven scroll/movement — the pivot is specifically about how sections are *entered*, not a return to full spatial exploration everywhere.
+**Landing: ** the site opens on a **single wide outdoor coastal-hills scene** — the Hero — rather than a stacked-sections scroll from the start. Everything in the scene is visible at once (no hidden/hunted-for objects); each landmark is a direct entry point into a section. Once inside a section, the site still uses continuous camera-driven scroll/movement — the pivot is specifically about how sections are *entered*, not a return to full spatial exploration everywhere.
 
 ### The Hero — coastal hillside landscape
 One wide, atmospheric establishing shot (leaning painterly/cinematic, not isometric-game-icon style) of an outdoor coastal-hills scene — golden hillside with the ocean visible below, Getty/Malibu-inspired. All landmarks below are visible simultaneously in this one view — nothing requires searching or navigating to find:
@@ -42,19 +44,6 @@ One wide, atmospheric establishing shot (leaning painterly/cinematic, not isomet
 
 ---
 
-## Tech Stack
-
-- **React Three Fiber + drei** — scene management, still allows raw GLSL materials
-- **GSAP + ScrollTrigger** (or Framer Motion) — drives camera movement/state off scroll position
-- **Cloudflare Pages** — hosting for the static build
-- **Cloudflare Worker** — backend proxy for API calls (see Digital Twin below)
-- **Cloudflare Containers** (GA product) — hosts the voice cloning model (Docker container, CPU-only, bound to the Worker by hostname, scales to zero)
-- Real DOM/HTML overlaid for all actual text content — WebGL is the visual world underneath/around it, never the only place text lives
-
-**Performance note:** build one section fully as a proof of concept before committing the whole architecture — persistent shader scenes need care around mobile GPU load, battery, and load time.
-
----
-
 ## Digital Twin (About section)
 
 An interactive 3D avatar + AI chat, built from "you" — text + cloned voice.
@@ -82,22 +71,7 @@ An interactive 3D avatar + AI chat, built from "you" — text + cloned voice.
 ### Voice — cloning
 - **Decision: clone the real voice**, not a stock voice
 - **Constraint:** no new paid subscriptions/vendors beyond existing OpenAI/Anthropic/Gemini credits, and no exposing a personal computer to the public internet
-- **Model choice:** CPU-friendly open-source cloning model — candidates: **NeuTTS Air** (0.5B, GGUF/GGML, built for consumer hardware) or **Pocket TTS** (100M params, faster than real-time on laptop CPU). Avoid GPU-oriented models (Fish Speech 1.5, XTTS v2, CosyVoice2) — much slower on CPU.
-- **Hosting:** package the chosen model in a Docker container → deploy via **Cloudflare Containers** (GA, CPU workloads supported, billed on active CPU only, scales to zero) → Worker calls it by hostname. Entire stack stays on Cloudflare; personal computer is only used for local prototyping before containerizing.
-- **Open item:** not yet verified that NeuTTS Air / Pocket TTS containerize cleanly — confirm early during implementation, not a blocking assumption.
-
-### Chat backend architecture
-```
-Frontend (chat UI + particle avatar)
-   ↓
-Cloudflare Worker (holds API keys as secrets, rate-limited)
-   ↓ text                              ↓ audio
-Anthropic API                    Cloudflare Container
-(generates reply,                (runs cloned-voice
- persona system prompt)           TTS model)
-   ↓                                    ↓
-        Both streamed back to frontend
-```
+- Model candidates, hosting, benchmark plan, and fallback behavior: see [tech-stack.md](tech-stack.md) (Digital Twin backend + TTS risk sections)
 
 ### Chat scope
 **Decision: Guided**, not freeform — steers toward background/projects rather than answering as a general-purpose chatbot. Important both for staying on-brand and for containing adversarial/off-topic probing from public visitors.
@@ -158,8 +132,7 @@ Shaders and 3D effects should reflect this: dry golden-hour haze, dappled light 
 The site's visual mood shifts based on the visitor's real local time and weather, while staying within the coastal-hills identity (modulating, not replacing it). The Hero's open sky is the direct display surface for it (see Site Structure & Concept), not a window object.
 
 - **Time of day** — read from browser timezone/clock, no permission needed. Buckets: Morning / Midday / Golden hour / Night.
-- **Weather** — needs visitor location: geolocation (accurate, needs permission) or IP-based lookup (coarser, no permission prompt). Needs a graceful fallback if permission is denied — default to a pleasant baseline mood, don't block the experience. Buckets: Clear / Cloudy / Rain / Marine layer (fog) — swapped "Storm/Snow" for conditions that actually fit Southern California coastal weather.
-- **API call:** goes through the Cloudflare Worker (same pattern as Anthropic/TTS calls), not called directly from the browser.
+- **Weather** — coarse visitor location resolved server-side with no permission prompt (see [tech-stack.md](tech-stack.md), Weather system backend). Graceful fallback required if location/weather can't be determined — default to a pleasant baseline mood, don't block the experience. Buckets: Clear / Cloudy / Rain / Marine layer (fog) — swapped "Storm/Snow" for conditions that actually fit Southern California coastal weather.
 - **Mood mapping examples** (illustrative):
   - Clear + Midday → bright, warm, ocean sparkling in the distance
   - Marine layer/fog → soft gray-blue haze rolling over the hills, muted golds, moodier but still warm
@@ -244,7 +217,7 @@ The site's visual mood shifts based on the visitor's real local time and weather
 - Visual style stays in the coastal-hills world established in the Visual & Art Direction section — open air, natural light, not an interior desk-and-window setup
 
 ### The letter — real, accessible form
-- Actual HTML `<input>`/`<textarea>` fields (name, email, message) positioned inside the 3D scene using React Three Fiber's `<Html>` (drei) — visually sits on the paper texture, but remains a real, keyboard-accessible form underneath
+- Actual HTML `<input>`/`<textarea>` fields (name, email, message) positioned inside the 3D scene — visually sits on the paper texture, but remains a real, keyboard-accessible form underneath
 - Consistent with the site-wide principle: interactivity should never bury real content/functionality behind WebGL-only rendering
 
 ### Fold animation — flat letter → paper airplane
@@ -257,16 +230,16 @@ Eased trajectory (bezier/arc curve) from the mailbox/writing surface out into th
 **Decision: text confirmation appears after** the plane sails off into the open sky and out of view (not a particle/light flash, not a silent disappear).
 
 - The moment the plane disappears into the distance/sky is the trigger for the actual form submission to fire
-- **Backend note:** submission needs to go to the Cloudflare Worker, which then needs a way to actually deliver the message (e.g. a transactional email API like Resend) or store it somewhere checkable (e.g. KV/D1) — not yet decided which; flag as an implementation detail to resolve later
+- **Backend:** resolved — see [tech-stack.md](tech-stack.md), Contact form backend
 
 ---
 
 ## Still Open / Not Yet Planned
 
 - ~~Alpine color palette~~ — RESOLVED, see Coastal Hills palette in Visual & Art Direction
+- ~~Contact backend: email delivery vs. storage method~~ — RESOLVED, see [tech-stack.md](tech-stack.md)
+- ~~Build order / what to prototype first~~ — RESOLVED, see [tech-stack.md](tech-stack.md)
 - Journey section: detailed content/copy/layout, exact milestone structure, and design of the door + flight-path mechanics
 - Museum of Creations: which specific pieces/projects go in the Art vs Tech wing
 - Skills scroller: pull-in animation mechanic, visual treatment, underlying skill-to-content data model
 - Resume button: exact placement/styling
-- Contact backend: email delivery vs. storage method (see Contact section)
-- Build order / what to prototype first
