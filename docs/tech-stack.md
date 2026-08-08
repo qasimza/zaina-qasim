@@ -1,6 +1,6 @@
-# Personal Website — Technical Stack & Architecture
+# Personal Website — Technical Design
 
-Companion to [functional-design.md](functional-design.md), which owns concept/content/art direction. This doc owns the technical decisions: what we're building with, how the pieces connect, and what still needs validation.
+This document is the companion to [functional-design.md](functional-design.md). That document says what the site is and how it behaves. This document says how we build it. It records the stack decisions, the architecture, the build order, and the items we must test early.
 
 ---
 
@@ -8,44 +8,50 @@ Companion to [functional-design.md](functional-design.md), which owns concept/co
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Build tooling | **Vite + React + TypeScript** | No meta-framework (Next.js etc.) — a 3D SPA has no SSR/SEO-critical content that the DOM overlay doesn't already handle. |
-| 3D scene | **React Three Fiber + drei** | Scene management; raw GLSL materials stay possible. drei's `<Html>` positions real DOM (plaques, contact form) inside the scene. |
-| Scroll & camera animation | **GSAP + ScrollTrigger + Lenis** | GSAP owns everything that touches the 3D world. Lenis provides smooth scrolling (use its official GSAP/ScrollTrigger integration). |
-| DOM UI animation | **Framer Motion (optional, DOM-only)** | Confined to React component transitions: chat panel expand/collapse (`AnimatePresence`), plaque hovers, resume pill. Never touches scroll position or the canvas. |
-| State | **Zustand** | Shared state that must work inside and outside the canvas: active section, twin widget minimized/expanded, weather mood, audio playing. Same maintainers as R3F. |
-| Dev tooling | **leva** (dev-only) | Control panel for tuning shader uniforms and weather-mood parameters. |
-| Text content | **Real DOM/HTML overlay** | Site-wide rule: WebGL is the visual world; real content never lives WebGL-only. |
+| Build tooling | **Vite + React + TypeScript** | No meta-framework (Next.js). The site is a 3D single-page app. It has no server-rendered content. The HTML overlay carries all real text. |
+| 3D scene | **React Three Fiber (R3F) + drei** | R3F manages the three.js scene as React components. Raw GLSL materials stay possible. drei's `<Html>` puts real HTML (plaques, contact form) inside the scene. |
+| Scroll and camera animation | **GSAP + ScrollTrigger + Lenis** | GSAP animates everything in the 3D world. Lenis makes the scroll smooth. Use the official Lenis + ScrollTrigger integration. |
+| HTML UI animation | **Framer Motion (optional)** | Only for HTML component transitions: chat panel open/close, plaque hover, resume button. It must not touch the scroll position or the canvas. |
+| State | **Zustand** | Holds state that many parts read: active section, twin widget state, weather mood, audio state. Code inside and outside the canvas can read it. |
+| Dev tooling | **leva** (dev only) | A control panel to adjust shader values and weather-mood values by hand. |
+| Text content | **HTML overlay** | Site rule: all real text lives in HTML. WebGL is the visual world only. |
 
-### Why GSAP over Framer Motion for the 3D work (decided)
+### Animation: why GSAP and not Framer Motion (decided)
 
-- `framer-motion-3d` (Framer Motion's official R3F bridge) is **deprecated, unmaintained, and React 18-only** — Framer Motion no longer has a supported path into three.js.
-- GSAP tweens any JS object property directly: `camera.position`, shader uniforms, `morphTargetInfluences` — no bridge code.
-- Choreography lives in **timelines with relative positioning** (`'-=1'`, `'<'`), not scattered scroll-fraction ranges — re-timing one beat shifts everything downstream automatically. This is the vocabulary the museum walk, Journey doors, and letter fold/throw will be tuned in.
-- ScrollTrigger's `pin` + scrub is exactly the "camera walks through a room while the page holds still" mechanic; horizontal exhibit scrollers inside a pinned section are its canonical use case.
-- GSAP is fully free (including formerly-paid plugins) since the Webflow acquisition.
+1. `framer-motion-3d` was the official Framer Motion path into three.js. The package is deprecated and supports only React 18. Framer Motion has no supported 3D path now.
+2. GSAP animates any JavaScript object property directly: `camera.position`, shader values, `morphTargetInfluences`. It needs no bridge code.
+3. GSAP timelines set steps in relation to each other (`'-=1'`, `'<'`). When you change one step, the later steps move with it. Scroll-fraction ranges do not do this.
+4. ScrollTrigger's `pin` holds the page still while scroll drives a camera move. This is the museum-walk mechanic. Horizontal scrollers inside a pinned section are a standard ScrollTrigger pattern.
+5. GSAP and all its plugins are free since the Webflow acquisition.
 
-### Server data / API calls (decided)
+### Server data and API calls (decided)
 
-**No data-fetching library (no TanStack Query).** The site has three real endpoints, and each is a shape a query cache serves poorly: chat is a hand-managed SSE stream with mid-stream aborts; weather is fetched once and consumed inside the render loop (shader uniforms via `useFrame`), so it must live in Zustand anyway for the canvas to read without React re-renders; contact is a single POST. Revisit only if the site grows real remote data (e.g. a blog wing with a CMS).
+**No data-fetching library (no TanStack Query).** The site has three real endpoints. None of them fits a query cache:
 
-The standard instead:
+1. Chat sends a stream. The code must read it chunk by chunk and must cancel it mid-stream.
+2. Weather loads at start and refreshes on a timer. Shaders read it from Zustand on every frame, without React re-renders. A library cache would hold a second copy of the same data.
+3. Contact sends one POST.
 
-- Every endpoint gets a **typed function in `src/api/`** (`getHello`, `getWeather`, …) built on the shared `getJson` client. Components never call `fetch` directly.
-- **App-start calls run outside React**: `main.tsx` calls a store init function one time (see `src/store/appStore.ts`). Components read the store and do not fetch. This also avoids StrictMode double-requests.
-- A call tied to one specific component's lifecycle uses `useEffect` + `AbortController`. This is the fallback for component-scoped needs, not the default.
-- Results shared across the site (weather mood, twin state) land in **Zustand stores**; the store owns its fetch calls and refresh timers (weather refreshes on an interval and on tab refocus while the visitor stays). Results local to one interaction (contact submit) stay in component state.
-- Chat streaming gets its own dedicated stream handler at M5 — it is not forced through `getJson`.
+We add a library only if the site grows many endpoints with shared reads (example: a blog wing with a CMS).
+
+The rules:
+
+1. Each endpoint gets one typed function in `src/api/`, built on the shared `getJson` client. Components never call `fetch` directly.
+2. App-start calls run outside React. `main.tsx` calls a store init function one time (see `src/store/appStore.ts`). Components read the store. This also prevents double calls from StrictMode.
+3. A call tied to one component's lifecycle uses `useEffect` + `AbortController`. This is the fallback, not the default.
+4. Results with many readers (weather, twin state) live in Zustand stores. The store owns its calls and its refresh timer. Weather refreshes on an interval and when the tab regains focus. Results with one reader (contact submit) stay in component state.
+5. Chat gets its own stream handler at M5. It does not go through `getJson`.
 
 ### Asset pipeline
 
-- **Draco/meshopt-compressed GLB** models, **KTX2** compressed textures — from day one, not as a later optimization; the coastal hero scene will blow past mobile budgets otherwise.
-- Morph-target assets (letter → paper airplane fold) authored in Blender, exported as GLB with matching vertex order between states.
+1. Compress all models: GLB with Draco or meshopt. Compress all textures: KTX2. Do this from the start. The hero scene is too heavy for mobile devices without compression.
+2. Author the letter-fold morph target in Blender. Export one GLB with the same vertex order in both shapes.
 
 ---
 
 ## Cloudflare Architecture
 
-**One Worker project** (not Pages + separate Worker). Cloudflare's guidance for new projects is Workers with static assets; all platform investment is going there and Pages is in maintenance. One `wrangler` config, one deploy, gives us:
+**One Worker project.** Not Cloudflare Pages plus a separate Worker. Cloudflare tells new projects to use Workers with static assets. Pages gets no new investment. One `wrangler` config covers the site files, the API routes, and all bindings.
 
 ```
                     ┌─────────────────────────────────────────┐
@@ -61,27 +67,20 @@ The standard instead:
 
 | Piece | Choice | Notes |
 |---|---|---|
-| Hosting | **Worker static assets** | Replaces the Pages plan. Static asset requests are free, same CDN. |
-| API routes | Same Worker's fetch handler | Holds API keys as secrets. |
-| Voice TTS | **Cloudflare Containers** | CPU-only, scales to zero, bound to the Worker. Up to 4 vCPU / 12 GiB (standard-4 or custom instance types) — plenty for the candidate models. See risk section below. |
-| Contact log | **D1** | The durable record — email delivery is best-effort; the D1 row can't get lost. |
-| Weather cache | **KV** | Cache Open-Meteo responses per city, ~15 min TTL. |
-| Contact delivery | **`send_email` Worker binding** | See Contact section. |
+| Hosting | **Worker static assets** | Static file requests are free. Same CDN as Pages. |
+| API routes | The same Worker | The Worker holds the API keys as secrets. |
+| Voice TTS | **Cloudflare Containers** | CPU only. Scales to zero. Bound to the Worker. Limit: 4 vCPU / 12 GiB (standard-4 or custom types). This is enough for the candidate models. See the TTS risk section. |
+| Contact log | **D1** | The permanent record. Email delivery can fail; the D1 row cannot get lost. |
+| Weather cache | **KV** | Caches Open-Meteo responses per city for about 15 minutes. |
+| Contact delivery | **`send_email` Worker binding** | See the contact form section. |
 
-### Visitor interaction storage (D1)
+### Visitor data storage (D1)
 
-D1 is the single store for visitor interactions, written only by the Worker — the frontend never
-touches the database directly (same boundary as the `src/api/` rule client-side):
+D1 is the single store for visitor data. Only the Worker writes to it. The frontend has no database access. This is the same boundary as the `src/api/` rule on the client side.
 
-- **Contact messages** (M3) — name, email, message, timestamp. The sender gives their email on
-  purpose, so follow-up/outreach from this table is fine.
-- **Twin chat transcripts** (M5) — logged Worker-side per conversation for reviewing what visitors
-  ask and improving the persona. Visitors are anonymous (no account); store a random conversation
-  id, timestamps, and messages — not IP addresses. **Requires a short disclosure line in the chat
-  UI** ("conversations are recorded"), designed in at M5, not bolted on.
-- **Lightweight analytics events** (optional, later) — section visits, twin opens, resume clicks.
-  Start with a simple D1 events table; move to Workers Analytics Engine only if volume ever makes
-  per-row inserts silly. No third-party analytics script, which also keeps the site cookie-free.
+1. **Contact messages** (M3) — name, email, message, timestamp. The sender gives their email on purpose. Follow-up from this table is acceptable.
+2. **Twin chat transcripts** (M5) — the Worker logs each conversation. Purpose: review what visitors ask, improve the persona. Store a random conversation id, timestamps, and the messages. Do not store IP addresses. The chat UI must show a short notice: "conversations are recorded". Design this notice into M5 from the start.
+3. **Analytics events** (optional, later) — section visits, twin opens, resume clicks. Start with one D1 events table. Move to Workers Analytics Engine only if the row volume becomes a problem. No third-party analytics script. The site stays cookie-free.
 
 ---
 
@@ -97,74 +96,92 @@ Anthropic API                    Container (cloned-voice TTS)
    Both streamed back; text and audio timelines are decoupled
 ```
 
-- Text streams from Anthropic immediately; audio joins when the container delivers it. This decoupling (already a functional-design decision for scroll-away behavior) doubles as cold-start cover.
-- Sentence-level chunked TTS: synthesize and ship sentence 1 while sentence 2 generates.
+1. Text streams from the Anthropic API at once. Audio joins when the container delivers it.
+2. The text timeline and the audio timeline are independent. The functional design requires this for scroll-away behavior. It also hides container cold starts.
+3. The Worker sends text to TTS sentence by sentence. Sentence 1 plays while sentence 2 generates.
 
-### Endpoint protection (build before launch, not after)
+### Endpoint protection (build before launch)
 
-A public unauthenticated Worker proxying to the Anthropic API is a free-LLM endpoint for anyone who reads devtools. Minimum bar:
+`/api/chat` is a public door to a paid model. A stranger can script calls against it and spend the token budget. Required controls:
 
-- **Turnstile** verification on chat session start (invisible, free, Cloudflare-native)
-- **Workers Rate Limiting binding** per IP
-- Hard caps on `max_tokens` and conversation length
-- Guided-scope persona prompt (already decided in the functional design doc)
+1. **Turnstile** check when a chat session starts. It is invisible, free, and Cloudflare-native.
+2. **Workers Rate Limiting binding**, per IP.
+3. A hard cap on `max_tokens` and on conversation length.
+4. The guided-scope persona prompt (decided in the functional design).
 
-Same Turnstile check on the contact form for spam.
+The contact form gets the same Turnstile check, against spam.
+
+### Persona prompt: storage and injection (decided)
+
+**Treat the prompt as public.** A visitor can talk the model into revealing its instructions. No defense stops this fully. So the prompt must contain no secrets and no data that cannot appear on the site itself. Then a successful extraction costs nothing.
+
+**Storage:** the prompt lives in `worker/persona.ts`. That file is in `.gitignore`. The deploy bundles it into the Worker. The public repo gets `worker/persona.example.ts` with placeholder text, so a clone still builds. This hides the raw persona material for privacy, not for security. Move the prompt to KV only if we later need to edit it without a deploy.
+
+**Injection:** a visitor can type "ignore your instructions" and the model can comply. The damage stays small because of four rules:
+
+1. The model gets no tools. Chat is text in, text out.
+2. The Worker never executes model output.
+3. The browser renders replies as plain text, never as HTML.
+4. Transcripts go into D1 through parameterized SQL. No code reads them back into prompts.
+
+With these rules, a successful injection produces only off-brand text in the attacker's own session. The rate limit and the token cap limit the cost.
 
 ### Voice/TTS — the main technical risk
 
-Candidates (from functional design doc): **NeuTTS Air** (0.5B, GGUF) or **Pocket TTS** (100M, faster than real-time on laptop CPU — the safer bet). Two failure modes to de-risk **before** building around this:
+Candidates: **NeuTTS Air** (0.5B parameters, GGUF) or **Pocket TTS** (100M parameters). Pocket TTS is smaller, so it is more likely to run fast enough. Two failure modes exist. Test both before any twin code depends on them.
 
-1. **Cold starts from scale-to-zero.** Image pull + model load can mean 10–30+ s for the first visitor after idle. Mitigations:
-   - Bake model weights into the image — never download at boot.
-   - Pre-warm: Worker fires a wake ping to the container on first *page* request, long before anyone opens the chat.
-   - "Thinking" particle state + text-first streaming covers the remaining gap.
-2. **Real-time factor on constrained vCPUs.** Benchmark locally under constraint before committing: `docker run --cpus=2`, measure seconds-of-audio per second-of-compute. Below ~1× real-time at 2 vCPU → drop to the smaller model or rethink.
+1. **Cold starts.** The container scales to zero. The first request after idle pays for image start plus model load: possibly 10–30+ seconds. Controls:
+   1. Build the model weights into the image. Never download at boot.
+   2. The Worker sends a wake request to the container on the first page request, before anyone opens the chat.
+   3. The "thinking" particle state and text-first streaming cover the remaining wait.
+2. **Speed on limited vCPUs.** Test locally with `docker run --cpus=2`. Measure seconds of audio produced per second of compute. If the result is below about 1× real time at 2 vCPU, use the smaller model or drop the voice feature.
 
-**Graceful degradation is a designed state:** if the container is cold or slow, the twin answers in text with captions and audio simply doesn't play — must feel intentional, same principle as the weather-permission fallback.
+**Degraded mode is a designed state.** If the container is cold or slow, the twin answers in text with captions and no audio plays. This must look intentional. The weather-permission fallback follows the same principle.
 
 ---
 
 ## Weather system backend
 
-- **Location without any permission prompt:** every request already carries `request.cf.latitude / longitude / timezone / city` — no browser geolocation, no IP-lookup service.
-- **Weather data: Open-Meteo** — free, no API key, called from the Worker.
-- Cache per city in KV (~15 min). Browser geolocation permission is at most an optional "improve accuracy" upgrade; coarse city-level weather is plenty for a mood system.
-- Time-of-day buckets remain purely client-side (browser clock), per the functional design doc.
+1. **Location:** each request to the Worker carries `request.cf.latitude / longitude / timezone / city`. No browser geolocation prompt. No IP-lookup service.
+2. **Weather data:** Open-Meteo. Free, no API key. The Worker calls it.
+3. **Cache:** KV, per city, about 15 minutes. City-level accuracy is enough for a mood system. A browser geolocation prompt is at most an optional accuracy upgrade.
+4. **Time of day:** stays fully client-side (browser clock), per the functional design.
 
 ---
 
-## Contact form backend (resolves the functional-design open item)
+## Contact form backend (decided)
 
-**Decision: zero-vendor, all-Cloudflare.**
+**Zero vendors. All Cloudflare.**
 
-1. Form posts to `/api/contact` (Turnstile-verified).
-2. Worker **inserts into D1** — the durable log.
-3. Worker sends a notification email to own inbox via the **`send_email` binding** (Email Routing must be enabled on the domain; own address verified as a destination — this binding only delivers to verified destinations, which is exactly the contact-form case).
+1. The form posts to `/api/contact`. Turnstile checks the request.
+2. The Worker inserts the message into D1. This is the permanent record.
+3. The Worker sends a notification email to the owner's inbox through the `send_email` binding. Requirements: Email Routing is enabled on the domain, and the owner's address is verified as a destination. The binding only delivers to verified destinations. That matches this use exactly.
 
-Fallback if ever needed: Resend free tier (only required for delivery to arbitrary addresses, which this feature doesn't need).
-
----
-
-## Build order (resolves the functional-design open item)
-
-Ordered for momentum on an empty repo; risk spikes slot in where they gate work, not before everything.
-
-- **M0 — Walking skeleton.** Vite + React + TS + R3F scaffold, one Worker with static assets, `wrangler deploy` to a live URL. Exit: spinning cube + working `/api/hello` on the real domain. Makes every later change testable on a real phone.
-- **M1 — Hero proof of concept (go/no-go gate).** Blocked-out coastal scene with the three depth layers (placeholder geometry, not the art pass), one real shader effect, idle camera drift, GSAP + Lenis wired to one camera transition, DOM text overlay. Exit: acceptable frame rate/battery on a mid-range phone. This validates the architectural bet the whole site rests on.
-- **M2 — Hero art pass + weather mood system.** Real palette/lighting, sky as weather display surface, `/api/weather` route with `request.cf` + Open-Meteo + KV. Weather moods are flagged in the functional design doc as core, prototype-early.
-- **M3 — One full section end-to-end (Contact).** Smallest complete vertical slice: mailbox entry, HTML form in-scene, fold morph target, throw, `/api/contact` with D1 + `send_email` + Turnstile. Proves the section-entry pattern and the full frontend-to-backend loop.
-- **TTS benchmark spike (parallel, anytime before M5).** The Docker `--cpus=2` benchmark described above. Gates only the twin's voice — not on the critical path for M0–M4.
-- **M4 — Museum + Journey.** The big scroll-choreography sections; reuse the camera/timeline patterns M1 established. Skills scroller after, since it draws on both as data sources.
-- **M5 — Digital twin.** Chat UI, particle states, `/api/chat` with protections, persona prompt (material gathered per functional-design TODO), then voice pipeline if the spike passed.
-- **M6 — Polish pass.** Resume pill, time-of-day greetings, transitions, perf budget sweep, accessibility check on all DOM overlays.
+Fallback: the Resend free tier. Only needed for delivery to arbitrary addresses, which this feature does not do.
 
 ---
 
-## Open items / to validate early
+## Build order (decided)
 
-- [ ] **Benchmark TTS candidates under `--cpus=2`** (NeuTTS Air vs Pocket TTS) — first implementation task, blocks the voice feature's viability.
-- [ ] Confirm chosen TTS model containerizes cleanly (carried over from functional design doc).
-- [ ] Verify domain has Email Routing enabled + destination address verified before building the contact Worker route.
-- [ ] Build one section fully as proof of concept (mobile GPU load, battery, load time) before committing the whole architecture — carried over from functional design doc.
-- [ ] Measure Lenis + ScrollTrigger + R3F frame budget on a mid-range phone early.
+"M" means milestone. M0 is setup work; the site itself starts at M1. A number can split into lettered chunks (M0a–M0d) when we build it in small steps. Branch names reuse these labels (example: `m0c-worker-api-layer`).
+
+The order starts work on an empty repo fast. Risk tests sit where they block work, not before everything.
+
+1. **M0 — Skeleton.** Vite + React + TypeScript + R3F scaffold. One Worker with static assets. `wrangler deploy` to a live URL. Exit test: the spinning cube and `/api/hello` work on the real domain. After M0, every change is testable on a real phone.
+2. **M1 — Hero proof of concept (pass/fail gate).** Rough coastal scene with the three depth layers, placeholder geometry. One real shader effect. Idle camera drift. GSAP + Lenis drive one camera transition. HTML text overlay. Exit test: acceptable frame rate and battery use on a mid-range phone. This tests the architecture the whole site depends on.
+3. **M2 — Hero art pass + weather moods.** Real palette and lighting. The sky shows the weather. `/api/weather` with `request.cf` + Open-Meteo + KV. The functional design marks weather moods as core; build them early.
+4. **M3 — First full section (Contact).** The smallest complete slice: mailbox entry, HTML form in the scene, fold morph target, throw, `/api/contact` with D1 + `send_email` + Turnstile. This tests the section-entry pattern and the full frontend-to-backend loop.
+5. **TTS benchmark (parallel, any time before M5).** The `docker run --cpus=2` test above. It gates only the voice feature. It does not block M0–M4.
+6. **M4 — Museum + Journey.** The large scroll sections. They reuse the camera and timeline patterns from M1. The Skills scroller comes after, because it reads data from both sections.
+7. **M5 — Digital twin.** Chat UI, particle states, `/api/chat` with the protection controls, the persona prompt, then the voice pipeline if the benchmark passed.
+8. **M6 — Polish.** Resume button, time-of-day greetings, transitions, performance review, accessibility check on all HTML overlays.
+
+---
+
+## Open items / test early
+
+- [ ] Run the TTS benchmark with `--cpus=2` (NeuTTS Air vs Pocket TTS). This blocks the voice feature.
+- [ ] Confirm the chosen TTS model runs correctly in a container.
+- [ ] Confirm Email Routing is enabled on the domain and the destination address is verified. Do this before the contact Worker route.
+- [ ] Build one section fully before the rest (M1 exit test: mobile GPU load, battery, load time).
+- [ ] Measure the Lenis + ScrollTrigger + R3F frame budget on a mid-range phone early.
