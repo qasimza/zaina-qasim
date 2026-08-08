@@ -3,6 +3,7 @@
   "name": "zaina-qasim",
   "main": "worker/index.ts",
   "compatibility_date": "2026-08-01",
+  "workers_dev": false,
   "routes": [
     { "pattern": "zainaqasim.com", "custom_domain": true },
     { "pattern": "www.zainaqasim.com", "custom_domain": true }
