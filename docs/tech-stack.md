@@ -105,7 +105,7 @@ The contact form gets the same Turnstile check, against spam.
 
 **Treat the prompt as public.** A visitor can talk the model into revealing its instructions. No defense stops this fully. So the prompt must contain no secrets and no data that cannot appear on the site itself. Then a successful extraction costs nothing.
 
-**Storage:** the prompt lives in `worker/persona.ts`. That file is in `.gitignore`. The deploy bundles it into the Worker. The public repo gets `worker/persona.example.ts` with placeholder text, so a clone still builds. This hides the raw persona material for privacy, not for security. Move the prompt to KV only if we later need to edit it without a deploy.
+**Storage:** the prompt lives in `worker/persona.ts`, committed in the repo. The prompt is public by design (see above), and the prompt itself is part of the showcased work. One consequence: everything in that file must pass the same test as the rest of the prompt — publishable, no secrets, no private data. The raw persona source material (personal texts and messages) stays outside the repo; only the finished prompt goes in.
 
 **Injection:** a visitor can type "ignore your instructions" and the model can comply. The damage stays small because of four rules:
 

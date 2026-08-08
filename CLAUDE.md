@@ -23,5 +23,5 @@ The core rules: short sentences (max 20–25 words), active voice, simple tenses
 1. The browser/server boundary is the `src/` vs `worker/` split. Secrets exist only in `worker/` at run time, never in `src/`.
 2. Components never call `fetch` directly. All endpoint calls go through typed functions in `src/api/`.
 3. Shared state lives in Zustand stores in `src/store/`. A store owns its fetch calls and timers.
-4. This repo is public. Never commit secrets, `.dev.vars`, or the persona prompt (`worker/persona.ts`).
-5. Work happens on `m<milestone>-<name>` branches. Each chunk merges through a PR.
+4. This repo is public. Never commit secrets or `.dev.vars`. The persona prompt (`worker/persona.ts`) is committed on purpose — it is part of the showcased work and contains only public information.
+5. Milestone work happens on `m<milestone>-<name>` branches. Other changes use short descriptive branches. Every change merges through a PR.
