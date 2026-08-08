@@ -11,28 +11,18 @@ This document is the companion to [functional-design.md](functional-design.md). 
 | Build tooling | **Vite + React + TypeScript** | No meta-framework (Next.js). The site is a 3D single-page app. It has no server-rendered content. The HTML overlay carries all real text. |
 | 3D scene | **React Three Fiber (R3F) + drei** | R3F manages the three.js scene as React components. Raw GLSL materials stay possible. drei's `<Html>` puts real HTML (plaques, contact form) inside the scene. |
 | Scroll and camera animation | **GSAP + ScrollTrigger + Lenis** | GSAP animates everything in the 3D world. Lenis makes the scroll smooth. Use the official Lenis + ScrollTrigger integration. |
-| HTML UI animation | **Framer Motion (optional)** | Only for HTML component transitions: chat panel open/close, plaque hover, resume button. It must not touch the scroll position or the canvas. |
+| HTML UI animation | **Motion (optional)** | Motion is the maintained successor of Framer Motion. Only for HTML component transitions: chat panel open/close, plaque hover, resume button. It must not touch the scroll position or the canvas. |
 | State | **Zustand** | Holds state that many parts read: active section, twin widget state, weather mood, audio state. Code inside and outside the canvas can read it. |
 | Dev tooling | **leva** (dev only) | A control panel to adjust shader values and weather-mood values by hand. |
 | Text content | **HTML overlay** | Site rule: all real text lives in HTML. WebGL is the visual world only. |
 
-### Animation: why GSAP and not Framer Motion (decided)
+### Animation
 
-1. `framer-motion-3d` was the official Framer Motion path into three.js. The package is deprecated and supports only React 18. Framer Motion has no supported 3D path now.
-2. GSAP animates any JavaScript object property directly: `camera.position`, shader values, `morphTargetInfluences`. It needs no bridge code.
-3. GSAP timelines set steps in relation to each other (`'-=1'`, `'<'`). When you change one step, the later steps move with it. Scroll-fraction ranges do not do this.
-4. ScrollTrigger's `pin` holds the page still while scroll drives a camera move. This is the museum-walk mechanic. Horizontal scrollers inside a pinned section are a standard ScrollTrigger pattern.
-5. GSAP and all its plugins are free since the Webflow acquisition.
+GSAP animates everything in the 3D scene and everything scroll drives: camera moves, shader values, morph targets, pinned sections. GSAP timelines position steps in relation to each other, and ScrollTrigger maps timelines to scroll. Lenis smooths the scroll input. Motion, if used, animates HTML component transitions only. Its 3D package (`framer-motion-3d`) is deprecated and supports only React 18, so nothing in the scene uses it. GSAP and all its plugins are free.
 
-### Server data and API calls (decided)
+### Server data and API calls
 
-**No data-fetching library (no TanStack Query).** The site has three real endpoints. None of them fits a query cache:
-
-1. Chat sends a stream. The code must read it chunk by chunk and must cancel it mid-stream.
-2. Weather loads at start and refreshes on a timer. Shaders read it from Zustand on every frame, without React re-renders. A library cache would hold a second copy of the same data.
-3. Contact sends one POST.
-
-We add a library only if the site grows many endpoints with shared reads (example: a blog wing with a CMS).
+The site uses no data-fetching library. The three endpoints (a chat stream, a weather value with a refresh timer, a contact POST) do not fit a query cache.
 
 The rules:
 
@@ -111,7 +101,7 @@ Anthropic API                    Container (cloned-voice TTS)
 
 The contact form gets the same Turnstile check, against spam.
 
-### Persona prompt: storage and injection (decided)
+### Persona prompt: storage and injection
 
 **Treat the prompt as public.** A visitor can talk the model into revealing its instructions. No defense stops this fully. So the prompt must contain no secrets and no data that cannot appear on the site itself. Then a successful extraction costs nothing.
 
@@ -149,7 +139,7 @@ Candidates: **NeuTTS Air** (0.5B parameters, GGUF) or **Pocket TTS** (100M param
 
 ---
 
-## Contact form backend (decided)
+## Contact form backend
 
 **Zero vendors. All Cloudflare.**
 
@@ -161,7 +151,7 @@ Fallback: the Resend free tier. Only needed for delivery to arbitrary addresses,
 
 ---
 
-## Build order (decided)
+## Build order
 
 "M" means milestone. M0 is setup work; the site itself starts at M1. A number can split into lettered chunks (M0a–M0d) when we build it in small steps. Branch names reuse these labels (example: `m0c-worker-api-layer`).
 
