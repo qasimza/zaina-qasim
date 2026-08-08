@@ -101,20 +101,18 @@ Anthropic API                    Container (cloned-voice TTS)
 
 The contact form gets the same Turnstile check, against spam.
 
-### Persona prompt: storage and injection
-
-**Treat the prompt as public.** A visitor can talk the model into revealing its instructions. No defense stops this fully. So the prompt must contain no secrets and no data that cannot appear on the site itself. Then a successful extraction costs nothing.
-
-**Storage:** the prompt lives in `worker/persona.ts`, committed in the repo. The prompt is public by design (see above), and the prompt itself is part of the showcased work. One consequence: everything in that file must pass the same test as the rest of the prompt — publishable, no secrets, no private data. The raw persona source material (personal texts and messages) stays outside the repo; only the finished prompt goes in.
-
-**Injection:** a visitor can type "ignore your instructions" and the model can comply. The damage stays small because of four rules:
+Model output rules for the chat pipeline:
 
 1. The model gets no tools. Chat is text in, text out.
 2. The Worker never executes model output.
 3. The browser renders replies as plain text, never as HTML.
 4. Transcripts go into D1 through parameterized SQL. No code reads them back into prompts.
 
-With these rules, a successful injection produces only off-brand text in the attacker's own session. The rate limit and the token cap limit the cost.
+### Persona prompt
+
+**Treat the prompt as public.** The prompt must contain no secrets and no data that cannot appear on the site itself.
+
+**Storage:** the prompt lives in `worker/persona.ts`, committed in the repo. The prompt is public by design (see above), and the prompt itself is part of the showcased work. One consequence: everything in that file must pass the same test as the rest of the prompt — publishable, no secrets, no private data. The raw persona source material (personal texts and messages) stays outside the repo; only the finished prompt goes in.
 
 ### Voice/TTS — the main technical risk
 
