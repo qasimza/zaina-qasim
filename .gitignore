@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# wrangler local state
+.wrangler
+
+# local secrets for wrangler dev - never commit
+.dev.vars*
