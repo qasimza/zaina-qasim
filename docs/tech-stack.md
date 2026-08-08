@@ -108,12 +108,6 @@ Model output rules for the chat pipeline:
 3. The browser renders replies as plain text, never as HTML.
 4. Transcripts go into D1 through parameterized SQL. No code reads them back into prompts.
 
-### Persona prompt
-
-**Treat the prompt as public.** The prompt must contain no secrets and no data that cannot appear on the site itself.
-
-**Storage:** the prompt lives in `worker/persona.ts`, committed in the repo. The prompt is public by design (see above), and the prompt itself is part of the showcased work. One consequence: everything in that file must pass the same test as the rest of the prompt — publishable, no secrets, no private data. The raw persona source material (personal texts and messages) stays outside the repo; only the finished prompt goes in.
-
 ### Voice/TTS — the main technical risk
 
 Candidates: **NeuTTS Air** (0.5B parameters, GGUF) or **Pocket TTS** (100M parameters). Pocket TTS is smaller, so it is more likely to run fast enough. Two failure modes exist. Test both before any twin code depends on them.
@@ -173,3 +167,4 @@ The order starts work on an empty repo fast. Risk tests sit where they block wor
 - [ ] Confirm Email Routing is enabled on the domain and the destination address is verified. Do this before the contact Worker route.
 - [ ] Build one section fully before the rest (M1 exit test: mobile GPU load, battery, load time).
 - [ ] Measure the Lenis + ScrollTrigger + R3F frame budget on a mid-range phone early.
+- [ ] Decide persona prompt handling before M5: where it lives, and what content policy applies to it.
