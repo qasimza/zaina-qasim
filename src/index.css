@@ -21,3 +21,8 @@ body {
   left: 2rem;
   bottom: 2rem;
 }
+
+.api-status {
+  font-size: 0.8rem;
+  opacity: 0.6;
+}

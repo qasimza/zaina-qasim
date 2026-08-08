@@ -24,6 +24,17 @@ Companion to [functional-design.md](functional-design.md), which owns concept/co
 - ScrollTrigger's `pin` + scrub is exactly the "camera walks through a room while the page holds still" mechanic; horizontal exhibit scrollers inside a pinned section are its canonical use case.
 - GSAP is fully free (including formerly-paid plugins) since the Webflow acquisition.
 
+### Server data / API calls (decided)
+
+**No data-fetching library (no TanStack Query).** The site has three real endpoints, and each is a shape a query cache serves poorly: chat is a hand-managed SSE stream with mid-stream aborts; weather is fetched once and consumed inside the render loop (shader uniforms via `useFrame`), so it must live in Zustand anyway for the canvas to read without React re-renders; contact is a single POST. Revisit only if the site grows real remote data (e.g. a blog wing with a CMS).
+
+The standard instead:
+
+- Every endpoint gets a **typed function in `src/api/`** (`getHello`, `getWeather`, …) built on the shared `getJson` client. Components never call `fetch` directly.
+- One-shot calls use **`useEffect` + `AbortController`** (see `App.tsx` for the reference pattern).
+- Results shared across the site (weather mood, twin state) land in **Zustand stores**; results local to one interaction (contact submit) stay in component state.
+- Chat streaming gets its own dedicated stream handler at M5 — it is not forced through `getJson`.
+
 ### Asset pipeline
 
 - **Draco/meshopt-compressed GLB** models, **KTX2** compressed textures — from day one, not as a later optimization; the coastal hero scene will blow past mobile budgets otherwise.
@@ -55,6 +66,21 @@ Companion to [functional-design.md](functional-design.md), which owns concept/co
 | Contact log | **D1** | The durable record — email delivery is best-effort; the D1 row can't get lost. |
 | Weather cache | **KV** | Cache Open-Meteo responses per city, ~15 min TTL. |
 | Contact delivery | **`send_email` Worker binding** | See Contact section. |
+
+### Visitor interaction storage (D1)
+
+D1 is the single store for visitor interactions, written only by the Worker — the frontend never
+touches the database directly (same boundary as the `src/api/` rule client-side):
+
+- **Contact messages** (M3) — name, email, message, timestamp. The sender gives their email on
+  purpose, so follow-up/outreach from this table is fine.
+- **Twin chat transcripts** (M5) — logged Worker-side per conversation for reviewing what visitors
+  ask and improving the persona. Visitors are anonymous (no account); store a random conversation
+  id, timestamps, and messages — not IP addresses. **Requires a short disclosure line in the chat
+  UI** ("conversations are recorded"), designed in at M5, not bolted on.
+- **Lightweight analytics events** (optional, later) — section visits, twin opens, resume clicks.
+  Start with a simple D1 events table; move to Workers Analytics Engine only if volume ever makes
+  per-row inserts silly. No third-party analytics script, which also keeps the site cookie-free.
 
 ---
 
