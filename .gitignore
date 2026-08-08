@@ -25,3 +25,6 @@ dist-ssr
 
 # wrangler local state
 .wrangler
+
+# local secrets for wrangler dev - never commit
+.dev.vars*
