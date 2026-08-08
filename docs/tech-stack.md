@@ -31,8 +31,9 @@ Companion to [functional-design.md](functional-design.md), which owns concept/co
 The standard instead:
 
 - Every endpoint gets a **typed function in `src/api/`** (`getHello`, `getWeather`, …) built on the shared `getJson` client. Components never call `fetch` directly.
-- One-shot calls use **`useEffect` + `AbortController`** (see `App.tsx` for the reference pattern).
-- Results shared across the site (weather mood, twin state) land in **Zustand stores**; results local to one interaction (contact submit) stay in component state.
+- **App-start calls run outside React**: `main.tsx` calls a store init function one time (see `src/store/appStore.ts`). Components read the store and do not fetch. This also avoids StrictMode double-requests.
+- A call tied to one specific component's lifecycle uses `useEffect` + `AbortController`. This is the fallback for component-scoped needs, not the default.
+- Results shared across the site (weather mood, twin state) land in **Zustand stores**; the store owns its fetch calls and refresh timers (weather refreshes on an interval and on tab refocus while the visitor stays). Results local to one interaction (contact submit) stay in component state.
 - Chat streaming gets its own dedicated stream handler at M5 — it is not forced through `getJson`.
 
 ### Asset pipeline

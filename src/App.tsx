@@ -1,20 +1,9 @@
-import { useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { getHello } from './api/hello'
 import SpinningCube from './scene/SpinningCube'
+import { useAppStore } from './store/appStore'
 
 export default function App() {
-  const [apiStatus, setApiStatus] = useState('checking…')
-
-  useEffect(() => {
-    const ctrl = new AbortController()
-    getHello(ctrl.signal)
-      .then((data) => setApiStatus(data.message))
-      .catch(() => {
-        if (!ctrl.signal.aborted) setApiStatus('unreachable')
-      })
-    return () => ctrl.abort()
-  }, [])
+  const apiStatus = useAppStore((state) => state.apiStatus)
 
   return (
     <>
