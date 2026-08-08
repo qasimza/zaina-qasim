@@ -66,11 +66,17 @@ The rules:
 
 ### Visitor data storage (D1)
 
+**D1 is Cloudflare's hosted SQL database** (SQLite-based). It lives in the same Cloudflare account as the Worker. The Worker reaches it through a binding in `wrangler.jsonc` — no connection string, no credentials, no server to manage. It is not reachable from the internet; only the Worker and the `wrangler` CLI can query it. The free tier (5 GB, millions of reads per day) covers this site.
+
 D1 is the single store for visitor data. Only the Worker writes to it. The frontend has no database access. This is the same boundary as the `src/api/` rule on the client side.
 
-1. **Contact messages** (M3) — name, email, message, timestamp. The sender gives their email on purpose. Follow-up from this table is acceptable.
-2. **Twin chat transcripts** (M5) — the Worker logs each conversation. Purpose: review what visitors ask, improve the persona. Store a random conversation id, timestamps, and the messages. Do not store IP addresses. The chat UI must show a short notice: "conversations are recorded". Design this notice into M5 from the start.
-3. **Analytics events** (optional, later) — section visits, twin opens, resume clicks. Start with one D1 events table. Move to Workers Analytics Engine only if the row volume becomes a problem. No third-party analytics script. The site stays cookie-free.
+Each stored record carries the **visitor context**: IP address, country, city, user agent, and referer. The Worker reads these from the request headers and `request.cf`. No cookies are needed for this. Records stay; there is no deletion date.
+
+1. **Contact messages** (M3) — name, email, message, timestamp, visitor context. The sender gives their email on purpose. Follow-up from this table is acceptable.
+2. **Twin chat transcripts** (M5) — the Worker logs each conversation: a random conversation id, timestamps, the messages, and the visitor context. Purpose: review what visitors ask, improve the persona. The chat UI must show a short notice: "conversations are recorded". Design this notice into M5 from the start.
+3. **Analytics events** (optional, later) — section visits, twin opens, resume clicks, with visitor context. Start with one D1 events table. Move to Workers Analytics Engine only if the row volume becomes a problem. No third-party analytics script.
+
+The site sets no cookies today. A cookie-based visitor id comes later, for cross-session tracking and returning-visitor memory.
 
 ---
 
@@ -106,7 +112,13 @@ Model output rules for the chat pipeline:
 1. The model gets no tools. Chat is text in, text out.
 2. The Worker never executes model output.
 3. The browser renders replies as plain text, never as HTML.
-4. Transcripts go into D1 through parameterized SQL. No code reads them back into prompts.
+4. Transcripts go into D1 through parameterized SQL.
+
+Chat memory:
+
+1. Each request to the model carries the current conversation's history. The twin remembers the full current conversation. The client sends the history each turn; the Worker enforces the length caps.
+2. D1 transcripts are a log for the site owner, not a memory source. One session's stored transcript never enters another session's prompt.
+3. The twin has no memory across sessions today. A returning visitor starts fresh. The planned cookie-based visitor id adds this later.
 
 ### Voice/TTS — the main technical risk
 
@@ -168,3 +180,5 @@ The order starts work on an empty repo fast. Risk tests sit where they block wor
 - [ ] Build one section fully before the rest (M1 exit test: mobile GPU load, battery, load time).
 - [ ] Measure the Lenis + ScrollTrigger + R3F frame budget on a mid-range phone early.
 - [ ] Decide persona prompt handling before M5: where it lives, and what content policy applies to it.
+- [ ] Decide the transcript table shape at M5: row per message or row per conversation, and the write timing.
+- [ ] Add a privacy notice page before the twin launches: what the site stores and why, with a contact for questions.
