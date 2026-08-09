@@ -53,21 +53,18 @@ Draw calls matter more than triangle count. The cost per draw call is roughly th
 
 **Limit of these numbers:** no source names the test hardware. They say "mobile GPUs" and "typical hardware", with no phone model or chipset. The published numbers are therefore design targets, not a prediction for any one device.
 
-### Reference device performance
+### WebGL-specific facts
 
-Named chips, named benchmark. GFXBench Aztec Ruins is the standard mobile GPU test. These numbers show the hardware range that the word "mobile" covers.
+WebGL in a browser is the thing we ship, so native GPU benchmarks (GFXBench, Vulkan, Metal scores) do not apply. What the sources say about WebGL:
 
-| Chip | Phones (examples) | Aztec Ruins 1440p (High Tier) | Source |
-|---|---|---|---|
-| Snapdragon 8 Elite | Galaxy S25 | 125 fps (Vulkan) | [FoneArena](https://www.fonearena.com/blog/438746/snapdragon-8-elite-benchmarks.html) |
-| Snapdragon 8 Gen 3 | Galaxy S24 | 96 fps (Vulkan), 83 fps (OpenGL) | [Beebom](https://beebom.com/snapdragon-8-gen-3-benchmark-results/) |
-| Apple A18 Pro | iPhone 16 Pro | 72–73 fps | [Wccftech](https://wccftech.com/a18-pro-vs-a17-pro-13-percent-faster-in-gfxbench-aztec-ruins-but-higher-power-draw/), [Notebookcheck](https://www.notebookcheck.net/A18-Pro-vs-Snapdragon-8-Gen-3-GPU-benchmark-results-show-Apple-s-new-chipset-is-not-superior.890529.0.html) |
-| Apple A18 | iPhone 16 | 62 fps | [Wccftech](https://wccftech.com/a18-pro-vs-a17-pro-13-percent-faster-in-gfxbench-aztec-ruins-but-higher-power-draw/) |
-| Apple A17 Pro | iPhone 15 Pro | 54 fps | [Notebookcheck](https://www.notebookcheck.net/Apple-A17-Pro-GPU-Benchmarks-and-Specs.756245.0.html) |
+1. The browser checks the safety of every WebGL call and isolates processes. This marshalling costs performance that native code does not pay. ([Wonderland Engine](https://wonderlandengine.com/about/webgl-performance/))
+2. Safari, on iOS and macOS, adds large overhead on some WebGL calls. iOS is therefore the slower target, not the faster one. ([Wonderland Engine](https://wonderlandengine.com/about/webgl-performance/))
+3. Browsers reach a complexity limit where frame rate drops, and mid-range Android devices reach it first. ([PixelFree Studio](https://blog.pixelfreestudio.com/webgl-in-mobile-development-challenges-and-solutions/))
+4. Below 100 draw calls, WebGL and WebGPU perform about the same. Above 500, WebGL cannot hold frame rates that WebGPU can. This supports the under-100 draw call budget above.
 
-**How to read this table, and how not to.** These are native GPU tests (Vulkan and Metal), not WebGL. A browser adds overhead, so WebGL through three.js runs slower than these numbers on the same chip. The table is useful for one thing only: the relative gap between devices. A flagship from 2025 is roughly twice as fast as one from 2023, and mid-range and older phones fall well below every row here. It does not predict our frame rate on any device.
+**No usable per-device WebGL numbers exist in public sources.** [Basemark Web 3.0](https://web.gpuscore.com/) runs a WebGL browser benchmark and collects scores in its Power Board database, but the per-device results are not published as a citable table. We can run it on the test phone ourselves if a comparison number becomes useful.
 
-For WebGL-specific device scores, [Basemark Web 3.0](https://web.gpuscore.com/) publishes a browser-based results database.
+This is the gap that makes the measurement rule below necessary.
 
 Two costs have no published budget at all, because both depend on our own code and screen:
 
