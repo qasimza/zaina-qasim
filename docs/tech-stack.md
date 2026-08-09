@@ -51,7 +51,23 @@ These budgets come from published three.js guidance. We design to them; we do no
 
 Draw calls matter more than triangle count. The cost per draw call is roughly the same for 10 triangles or 10,000. The fixes are instancing, merged geometry, and texture atlases.
 
-**Limit of these numbers:** no source names the test hardware. They say "mobile GPUs" and "typical hardware", with no phone model or chipset. "Mobile" covers about a 10x performance range. The published numbers are therefore design targets, not a prediction for any one device.
+**Limit of these numbers:** no source names the test hardware. They say "mobile GPUs" and "typical hardware", with no phone model or chipset. The published numbers are therefore design targets, not a prediction for any one device.
+
+### Reference device performance
+
+Named chips, named benchmark. GFXBench Aztec Ruins is the standard mobile GPU test. These numbers show the hardware range that the word "mobile" covers.
+
+| Chip | Phones (examples) | Aztec Ruins 1440p (High Tier) | Source |
+|---|---|---|---|
+| Snapdragon 8 Elite | Galaxy S25 | 125 fps (Vulkan) | [FoneArena](https://www.fonearena.com/blog/438746/snapdragon-8-elite-benchmarks.html) |
+| Snapdragon 8 Gen 3 | Galaxy S24 | 96 fps (Vulkan), 83 fps (OpenGL) | [Beebom](https://beebom.com/snapdragon-8-gen-3-benchmark-results/) |
+| Apple A18 Pro | iPhone 16 Pro | 72–73 fps | [Wccftech](https://wccftech.com/a18-pro-vs-a17-pro-13-percent-faster-in-gfxbench-aztec-ruins-but-higher-power-draw/), [Notebookcheck](https://www.notebookcheck.net/A18-Pro-vs-Snapdragon-8-Gen-3-GPU-benchmark-results-show-Apple-s-new-chipset-is-not-superior.890529.0.html) |
+| Apple A18 | iPhone 16 | 62 fps | [Wccftech](https://wccftech.com/a18-pro-vs-a17-pro-13-percent-faster-in-gfxbench-aztec-ruins-but-higher-power-draw/) |
+| Apple A17 Pro | iPhone 15 Pro | 54 fps | [Notebookcheck](https://www.notebookcheck.net/Apple-A17-Pro-GPU-Benchmarks-and-Specs.756245.0.html) |
+
+**How to read this table, and how not to.** These are native GPU tests (Vulkan and Metal), not WebGL. A browser adds overhead, so WebGL through three.js runs slower than these numbers on the same chip. The table is useful for one thing only: the relative gap between devices. A flagship from 2025 is roughly twice as fast as one from 2023, and mid-range and older phones fall well below every row here. It does not predict our frame rate on any device.
+
+For WebGL-specific device scores, [Basemark Web 3.0](https://web.gpuscore.com/) publishes a browser-based results database.
 
 Two costs have no published budget at all, because both depend on our own code and screen:
 
