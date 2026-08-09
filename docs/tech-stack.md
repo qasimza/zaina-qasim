@@ -39,7 +39,7 @@ The rules:
 
 ### Performance budgets
 
-These budgets come from published three.js guidance. We design to them; we do not re-derive them.
+These budgets come from published three.js guidance. We design to them. We do not test them again.
 
 | Item | Budget | Source |
 |---|---|---|
@@ -49,27 +49,27 @@ These budgets come from published three.js guidance. We design to them; we do no
 | Varying variables per shader | Under 3 for mobile GPUs. | [100 three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) |
 | Shadow map size | 512–1024 on mobile. | [100 three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) |
 
-Draw calls matter more than triangle count. The cost per draw call is roughly the same for 10 triangles or 10,000. The fixes are instancing, merged geometry, and texture atlases.
+Draw calls control the cost more than triangle count. One draw call costs almost the same for 10 triangles and for 10,000 triangles. Three methods reduce draw calls: instancing, merged geometry, and texture atlases.
 
-**Limit of these numbers:** no source names the test hardware. They say "mobile GPUs" and "typical hardware", with no phone model or chipset. The published numbers are therefore design targets, not a prediction for any one device.
+**These numbers have one limit.** No source names its test hardware. Each source says "mobile GPUs" or "typical hardware". No source gives a phone model or a chip name. Use the numbers as design targets. Do not use them to predict the speed of one device.
 
-### WebGL-specific facts
+### WebGL facts
 
-WebGL in a browser is the thing we ship, so native GPU benchmarks (GFXBench, Vulkan, Metal scores) do not apply. What the sources say about WebGL:
+We ship WebGL in a browser. Native GPU benchmarks (GFXBench, Vulkan, and Metal scores) measure a different thing. Do not apply them to this site. The sources give four facts about WebGL:
 
-1. The browser checks the safety of every WebGL call and isolates processes. This marshalling costs performance that native code does not pay. ([Wonderland Engine](https://wonderlandengine.com/about/webgl-performance/))
-2. Safari, on iOS and macOS, adds large overhead on some WebGL calls. iOS is therefore the slower target, not the faster one. ([Wonderland Engine](https://wonderlandengine.com/about/webgl-performance/))
-3. Browsers reach a complexity limit where frame rate drops, and mid-range Android devices reach it first. ([PixelFree Studio](https://blog.pixelfreestudio.com/webgl-in-mobile-development-challenges-and-solutions/))
-4. Below 100 draw calls, WebGL and WebGPU perform about the same. Above 500, WebGL cannot hold frame rates that WebGPU can. This supports the under-100 draw call budget above.
+1. The browser checks each WebGL call for safety, and it isolates processes. These checks make WebGL slower than native code. ([Wonderland Engine](https://wonderlandengine.com/about/webgl-performance/))
+2. Safari adds large overhead to some WebGL calls, on iOS and on macOS. Thus iPhones are the slower test device, not the faster one. ([Wonderland Engine](https://wonderlandengine.com/about/webgl-performance/))
+3. Each browser has a complexity limit. Above the limit, the frame rate drops. Mid-range Android phones reach the limit first. ([PixelFree Studio](https://blog.pixelfreestudio.com/webgl-in-mobile-development-challenges-and-solutions/))
+4. Below 100 draw calls, WebGL and WebGPU give almost the same speed. Above 500 draw calls, WebGL loses frame rate and WebGPU keeps it. This fact supports the draw call budget above.
 
-**No usable per-device WebGL numbers exist in public sources.** [Basemark Web 3.0](https://web.gpuscore.com/) runs a WebGL browser benchmark and collects scores in its Power Board database, but the per-device results are not published as a citable table. We can run it on the test phone ourselves if a comparison number becomes useful.
+**Public sources give no WebGL score for each device.** [Basemark Web 3.0](https://web.gpuscore.com/) runs a WebGL benchmark in the browser. It collects the scores in the Power Board database. It does not publish a table of results per device. We can run this benchmark on the test phone if we need a comparison number.
 
-This is the gap that makes the measurement rule below necessary.
+Two costs have no published budget. Both costs depend on our own code and on the screen:
 
-Two costs have no published budget at all, because both depend on our own code and screen:
+1. **Fragment shader cost.** It equals the instructions in the shader, times the pixels the shader covers, times the device pixel ratio.
+2. **Sustained frame rate.** Benchmarks report peak values. This site renders continuously while a visitor reads. Therefore the device becomes hot and the GPU slows down.
 
-1. Fragment shader cost. It equals the instructions we write, times the pixels covered, times the device pixel ratio.
-2. Sustained frame rate. Benchmarks report peak values. This site renders continuously while a visitor reads, so thermal throttling applies.
+The next section gives the rule that closes this gap.
 
 ### Performance measurement
 
