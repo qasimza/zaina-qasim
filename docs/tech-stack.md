@@ -37,6 +37,36 @@ The rules:
 1. Compress all models: GLB with Draco or meshopt. Compress all textures: KTX2. Do this from the start. The hero scene is too heavy for mobile devices without compression.
 2. Author the letter-fold morph target in Blender. Export one GLB with the same vertex order in both shapes.
 
+### Performance budgets
+
+These budgets come from published three.js guidance. We design to them; we do not re-derive them.
+
+| Item | Budget | Source |
+|---|---|---|
+| Draw calls per frame | Under 100. Above 500 is a problem on any device. | [Draw calls: the silent killer](https://threejsroadmap.com/blog/draw-calls-the-silent-killer), [100 three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) |
+| Triangles, whole scene | Under 50K for mobile comfort. Under 500K for broad device support. | [three.js mobile optimization](https://digitalstrategyforce.com/journal/how-do-you-optimize-threejs-performance-for-mobile-devices/) |
+| Shader precision | `mediump` on mobile. It runs about 2x faster than `highp`. | [100 three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) |
+| Varying variables per shader | Under 3 for mobile GPUs. | [100 three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) |
+| Shadow map size | 512–1024 on mobile. | [100 three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) |
+
+Draw calls matter more than triangle count. The cost per draw call is roughly the same for 10 triangles or 10,000. The fixes are instancing, merged geometry, and texture atlases.
+
+**Limit of these numbers:** no source names the test hardware. They say "mobile GPUs" and "typical hardware", with no phone model or chipset. "Mobile" covers about a 10x performance range. The published numbers are therefore design targets, not a prediction for any one device.
+
+Two costs have no published budget at all, because both depend on our own code and screen:
+
+1. Fragment shader cost. It equals the instructions we write, times the pixels covered, times the device pixel ratio.
+2. Sustained frame rate. Benchmarks report peak values. This site renders continuously while a visitor reads, so thermal throttling applies.
+
+### Performance measurement
+
+Because published budgets cannot answer the two items above, every milestone reports measured numbers on one named device.
+
+1. Dev builds show a frame-rate counter and log `renderer.info`: `render.calls` (draw calls) and `render.triangles`. These are permanent fixtures, added at M1, not test scaffolding.
+2. M1 records the first baseline: frame rate, draw calls, and triangles, on the named test phone (model and year), after two minutes of continuous rendering.
+3. Every later milestone reports the same three numbers on the same phone, and compares them to the M1 baseline.
+4. A rough scene must be rough in appearance only. Pixel coverage, shader complexity, layer count, and device pixel ratio must match the planned final version, or the measurement does not transfer.
+
 ---
 
 ## Cloudflare Architecture
