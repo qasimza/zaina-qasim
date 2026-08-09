@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import SpinningCube from './scene/SpinningCube'
+import Scene from './scene/Scene'
 import { useAppStore } from './store/appStore'
 
 export default function App() {
@@ -7,10 +7,8 @@ export default function App() {
 
   return (
     <>
-      <Canvas camera={{ position: [0, 0, 4], fov: 50 }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[3, 4, 2]} intensity={1.4} />
-        <SpinningCube />
+      <Canvas camera={{ position: [0, 1.5, 8], fov: 55 }}>
+        <Scene />
       </Canvas>
       <main className="overlay">
         <p>Zaina Qasim — under construction</p>
