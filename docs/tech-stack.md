@@ -37,50 +37,28 @@ The rules:
 1. Compress all models: GLB with Draco or meshopt. Compress all textures: KTX2. Do this from the start. The hero scene is too heavy for mobile devices without compression.
 2. Author the letter-fold morph target in Blender. Export one GLB with the same vertex order in both shapes.
 
-### Performance budgets
+### Performance
 
-These budgets come from three.js and WebGL guidance, not from raw GPU specifications. They tell us how to build the scene. We design to them. We do not test them again.
+Build targets:
 
-| Item | Budget | Source (published) |
-|---|---|---|
-| Frame time | Under 33 ms on a mid-range phone (30 fps). Under 16.6 ms on a flagship phone (60 fps). | [Digital Strategy Force](https://digitalstrategyforce.com/journal/how-do-you-optimize-threejs-performance-for-mobile-devices/) (Feb 2026) |
-| Draw calls per frame | Under 50 on mobile. Under 100 in general. Above 500 fails on any device. | [Digital Strategy Force](https://digitalstrategyforce.com/journal/how-do-you-optimize-threejs-performance-for-mobile-devices/) (Feb 2026), [Utsubo](https://www.utsubo.com/blog/threejs-best-practices-100-tips) (Mar 2026) |
-| Shader precision | `mediump` on mobile. It runs about 2x faster than `highp`. | [Utsubo](https://www.utsubo.com/blog/threejs-best-practices-100-tips) (Mar 2026) |
-| Varying variables per shader | Under 3 for mobile GPUs. | [Utsubo](https://www.utsubo.com/blog/threejs-best-practices-100-tips) (Mar 2026) |
-| Shadow map size | 512–1024 on mobile. | [Utsubo](https://www.utsubo.com/blog/threejs-best-practices-100-tips) (Mar 2026) |
+| Item | Target |
+|---|---|
+| Frame time | Under 33 ms on a mid-range phone (30 fps). Under 16.6 ms on a flagship phone (60 fps). |
+| Draw calls per frame | Under 50 on mobile. |
+| Shader precision | `mediump`. |
+| Varying variables per shader | Under 3. |
+| Shadow map size | 512–1024. |
 
-Draw calls control the cost more than triangle count. One draw call costs almost the same for 10 triangles and for 10,000 triangles. Three methods reduce draw calls: instancing, merged geometry, and texture atlases. One source reports a drop from 200 draw calls to 1 draw call after it applied `InstancedMesh`.
+Draw calls control the cost more than triangle count. Instancing, merged geometry, and texture atlases keep the count down. Optimize for Safari on iPhone: it adds the largest overhead to WebGL calls.
 
-**Triangle count has no confirmed budget.** An earlier version of this table gave 50K triangles for mobile. That number came from a search summary, and the source article does not contain it. The sources set frame time and draw call budgets instead. Do not use a triangle target until we confirm one.
+Measurement:
 
-**All budgets have one limit.** No source names its test hardware. Each source says "mobile GPUs", "mid-range", or "flagship". No source gives a phone model or a chip name. Use the numbers as design targets. Do not use them to predict the speed of one device.
+1. Dev builds show a frame counter and log `renderer.info`: `render.calls` and `render.triangles`. These are permanent, from M1.
+2. M1 records the baseline on the named test phone, after two minutes of continuous rendering.
+3. Each later milestone reports the same three numbers on the same phone.
+4. A rough scene must match the planned final version in pixel coverage, shader complexity, layer count, and device pixel ratio. Otherwise the measurement does not transfer.
 
-### WebGL facts
-
-We ship WebGL in a browser. Native GPU benchmarks (GFXBench, Vulkan, and Metal scores) measure a different thing. Do not apply them to this site. The sources give four facts about WebGL:
-
-1. The browser checks each WebGL call for safety, and it isolates processes. These checks make WebGL slower than native code. ([Wonderland Engine](https://wonderlandengine.com/about/webgl-performance/))
-2. Safari adds large overhead to some WebGL calls, on iOS and on macOS. Thus iPhones are the slower test device, not the faster one. ([Wonderland Engine](https://wonderlandengine.com/about/webgl-performance/))
-3. Each browser has a complexity limit. Above the limit, the frame rate drops. Mid-range Android phones reach the limit first. ([PixelFree Studio](https://blog.pixelfreestudio.com/webgl-in-mobile-development-challenges-and-solutions/))
-4. Below 100 draw calls, WebGL and WebGPU give almost the same speed. Above 500 draw calls, WebGL loses frame rate and WebGPU keeps it. This fact supports the draw call budget above.
-
-**Public sources give no WebGL score for each device.** [Basemark Web 3.0](https://web.gpuscore.com/) runs a WebGL benchmark in the browser. It collects the scores in the Power Board database. It does not publish a table of results per device. We can run this benchmark on the test phone if we need a comparison number.
-
-Two costs have no published budget. Both costs depend on our own code and on the screen:
-
-1. **Fragment shader cost.** It equals the instructions in the shader, times the pixels the shader covers, times the device pixel ratio.
-2. **Sustained frame rate.** Benchmarks report peak values. This site renders continuously while a visitor reads. Therefore the device becomes hot and the GPU slows down.
-
-The next section gives the rule that closes this gap.
-
-### Performance measurement
-
-Because published budgets cannot answer the two items above, every milestone reports measured numbers on one named device.
-
-1. Dev builds show a frame-rate counter and log `renderer.info`: `render.calls` (draw calls) and `render.triangles`. These are permanent fixtures, added at M1, not test scaffolding.
-2. M1 records the first baseline: frame rate, draw calls, and triangles, on the named test phone (model and year), after two minutes of continuous rendering.
-3. Every later milestone reports the same three numbers on the same phone, and compares them to the M1 baseline.
-4. A rough scene must be rough in appearance only. Pixel coverage, shader complexity, layer count, and device pixel ratio must match the planned final version, or the measurement does not transfer.
+Sources for the targets: [Digital Strategy Force](https://digitalstrategyforce.com/journal/how-do-you-optimize-threejs-performance-for-mobile-devices/) (Feb 2026), [Utsubo](https://www.utsubo.com/blog/threejs-best-practices-100-tips) (Mar 2026).
 
 ---
 
