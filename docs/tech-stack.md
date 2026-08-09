@@ -39,19 +39,21 @@ The rules:
 
 ### Performance budgets
 
-These budgets come from published three.js guidance. We design to them. We do not test them again.
+These budgets come from three.js and WebGL guidance, not from raw GPU specifications. They tell us how to build the scene. We design to them. We do not test them again.
 
-| Item | Budget | Source |
+| Item | Budget | Source (published) |
 |---|---|---|
-| Draw calls per frame | Under 100. Above 500 is a problem on any device. | [Draw calls: the silent killer](https://threejsroadmap.com/blog/draw-calls-the-silent-killer), [100 three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) |
-| Triangles, whole scene | Under 50K for mobile comfort. Under 500K for broad device support. | [three.js mobile optimization](https://digitalstrategyforce.com/journal/how-do-you-optimize-threejs-performance-for-mobile-devices/) |
-| Shader precision | `mediump` on mobile. It runs about 2x faster than `highp`. | [100 three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) |
-| Varying variables per shader | Under 3 for mobile GPUs. | [100 three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) |
-| Shadow map size | 512–1024 on mobile. | [100 three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) |
+| Frame time | Under 33 ms on a mid-range phone (30 fps). Under 16.6 ms on a flagship phone (60 fps). | [Digital Strategy Force](https://digitalstrategyforce.com/journal/how-do-you-optimize-threejs-performance-for-mobile-devices/) (Feb 2026) |
+| Draw calls per frame | Under 50 on mobile. Under 100 in general. Above 500 fails on any device. | [Digital Strategy Force](https://digitalstrategyforce.com/journal/how-do-you-optimize-threejs-performance-for-mobile-devices/) (Feb 2026), [Utsubo](https://www.utsubo.com/blog/threejs-best-practices-100-tips) (Mar 2026) |
+| Shader precision | `mediump` on mobile. It runs about 2x faster than `highp`. | [Utsubo](https://www.utsubo.com/blog/threejs-best-practices-100-tips) (Mar 2026) |
+| Varying variables per shader | Under 3 for mobile GPUs. | [Utsubo](https://www.utsubo.com/blog/threejs-best-practices-100-tips) (Mar 2026) |
+| Shadow map size | 512–1024 on mobile. | [Utsubo](https://www.utsubo.com/blog/threejs-best-practices-100-tips) (Mar 2026) |
 
-Draw calls control the cost more than triangle count. One draw call costs almost the same for 10 triangles and for 10,000 triangles. Three methods reduce draw calls: instancing, merged geometry, and texture atlases.
+Draw calls control the cost more than triangle count. One draw call costs almost the same for 10 triangles and for 10,000 triangles. Three methods reduce draw calls: instancing, merged geometry, and texture atlases. One source reports a drop from 200 draw calls to 1 draw call after it applied `InstancedMesh`.
 
-**These numbers have one limit.** No source names its test hardware. Each source says "mobile GPUs" or "typical hardware". No source gives a phone model or a chip name. Use the numbers as design targets. Do not use them to predict the speed of one device.
+**Triangle count has no confirmed budget.** An earlier version of this table gave 50K triangles for mobile. That number came from a search summary, and the source article does not contain it. The sources set frame time and draw call budgets instead. Do not use a triangle target until we confirm one.
+
+**All budgets have one limit.** No source names its test hardware. Each source says "mobile GPUs", "mid-range", or "flagship". No source gives a phone model or a chip name. Use the numbers as design targets. Do not use them to predict the speed of one device.
 
 ### WebGL facts
 
