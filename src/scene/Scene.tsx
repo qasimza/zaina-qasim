@@ -5,12 +5,9 @@ import { useRenderStore } from '../store/renderStore'
 // The element owns its base count. The store owns the multiplier.
 const BASE_GRASS = 100_000
 
-// Test override, so a phone can try values without a rebuild: ?blades=1000000
-const bladeOverride = Number(new URLSearchParams(window.location.search).get('blades'))
-
 export default function Scene() {
   const scatterDensity = useRenderStore((state) => state.settings.scatterDensity)
-  const bladeCount = bladeOverride || Math.round(BASE_GRASS * scatterDensity)
+  const bladeCount = Math.round(BASE_GRASS * scatterDensity)
 
   return (
     <>
