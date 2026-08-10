@@ -38,18 +38,18 @@ const FIDELITY: Record<Fidelity, FidelitySettings> = {
     // 1024 holds an edge across a wide hillside. 512 shows steps on long shadows.
     shadowMapSize: 1024,
     postProcessing: false,
-    splatMaxPixelRadius: 48,
-    splatMinPixelRadius: 1.5,
-    splatConeFoveate: 0.5,
+    splatMaxPixelRadius: 16,
+    splatMinPixelRadius: 3,
+    splatConeFoveate: 0.7,
   },
   high: {
     pixelRatioCap: 2,
     scatterDensity: 1,
     shadowMapSize: 2048,
     postProcessing: true,
-    splatMaxPixelRadius: 128,
-    splatMinPixelRadius: 0.5,
-    splatConeFoveate: 0,
+    splatMaxPixelRadius: 32,
+    splatMinPixelRadius: 1.5,
+    splatConeFoveate: 0.3,
   },
 }
 
