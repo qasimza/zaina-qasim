@@ -1,28 +1,24 @@
 import { OrbitControls } from '@react-three/drei'
-import GrassTest from './GrassTest'
-import { useRenderStore } from '../store/renderStore'
-
-// The element owns its base count. The store owns the multiplier.
-const BASE_GRASS = 100_000
+import { Suspense } from 'react'
+import SplatLandscape, { Landmark } from './SplatLandscape'
 
 export default function Scene() {
-  const scatterDensity = useRenderStore((state) => state.settings.scatterDensity)
-  const bladeCount = Math.round(BASE_GRASS * scatterDensity)
-
   return (
     <>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[5, 8, 3]} intensity={1.4} />
+      {/* Splats carry baked colour. The lights are only for the placed meshes. */}
+      <ambientLight intensity={1.2} />
+      <directionalLight position={[5, 10, 5]} intensity={1.5} />
 
-      {/* Hillside placeholder. Flat colour, no art. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]}>
-        <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial color="#9aa871" />
-      </mesh>
+      <Suspense fallback={null}>
+        <SplatLandscape />
+      </Suspense>
 
-      {/* TEMPORARY device test. Not for commit. */}
-      <GrassTest count={bladeCount} />
-      <OrbitControls />
+      {/* Interactive placeholders. These stand in for the museum, signpost and mailbox. */}
+      <Landmark position={[0, 0, -4]} label="museum" />
+      <Landmark position={[-3, 0, -2]} label="signpost" color="#7a8b5e" />
+      <Landmark position={[3, 0, -2]} label="mailbox" color="#4a7fc9" />
+
+      <OrbitControls makeDefault />
     </>
   )
 }

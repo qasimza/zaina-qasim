@@ -12,7 +12,12 @@ export default function App() {
 
   return (
     <>
-      <Canvas camera={{ position: [0, 1.5, 8], fov: 55 }} dpr={[1, pixelRatioCap]}>
+      {/* Spark asks for antialias: false. WebGL AA does not help splats and costs a lot. */}
+      <Canvas
+        camera={{ position: [0, 0, 0], fov: 60, near: 0.1, far: 1000 }}
+        dpr={[1, pixelRatioCap]}
+        gl={{ antialias: false }}
+      >
         <PerformanceMonitor onDecline={dropFidelity} flipflops={2} onFallback={dropFidelity}>
           <Scene />
         </PerformanceMonitor>
