@@ -1,4 +1,3 @@
-import { getGPUTier } from 'detect-gpu'
 import { create } from 'zustand'
 
 /** What the visitor is using. Decides composition, not cost. */
@@ -37,8 +36,6 @@ interface RenderState {
   device: Device
   fidelity: Fidelity
   settings: FidelitySettings
-  /** The GPU name, when detect-gpu reports one. For the dev readout. */
-  gpu?: string
 }
 
 export const useRenderStore = create<RenderState>(() => ({
@@ -62,40 +59,28 @@ function detectDevice(): Device {
   return coarsePointer || narrow ? 'mobile' : 'desktop'
 }
 
-function setFidelity(fidelity: Fidelity, gpu?: string): void {
-  useRenderStore.setState({ fidelity, settings: FIDELITY[fidelity], gpu })
-}
-
 /**
  * Lowers fidelity one step. Never raises it.
- * Raising it again causes the quality to flicker: the scene gets heavy, drops,
- * recovers, then gets heavy again. One downward step is enough.
+ *
+ * PerformanceMonitor calls this when frames drop. It measures the real scene on
+ * the real device, so no static GPU database is needed to guess the same thing.
+ *
+ * It does not raise fidelity again, because that makes the quality flicker: the
+ * scene gets heavy, drops, recovers, then gets heavy again. One step down is enough.
  */
 export function dropFidelity(): void {
   if (useRenderStore.getState().fidelity === 'low') return
-  setFidelity('low', useRenderStore.getState().gpu)
+  if (readOverride('fidelity', ['low', 'high'] as const)) return
+  useRenderStore.setState({ fidelity: 'low', settings: FIDELITY.low })
 }
 
 /** Runs one time at app start, from main.tsx. */
 export function initRender(): void {
-  // Step 1, instant: guess fidelity from device, so the scene can start rendering.
+  // Start from the device. Measurement corrects it within the first seconds.
   const device = detectDevice()
   const override = readOverride('fidelity', ['low', 'high'] as const)
-  const guess: Fidelity = override ?? (device === 'mobile' ? 'low' : 'high')
-  useRenderStore.setState({ device, fidelity: guess, settings: FIDELITY[guess] })
-
-  // Step 2, async: replace the guess with the measured GPU tier.
-  // An override skips this, so tests hold the fidelity they asked for.
-  if (!override) {
-    getGPUTier({ benchmarksURL: '/gpu-benchmarks' })
-      .then((result) => {
-        // Tier 0-1 means weak hardware or an unknown GPU. Tier 2-3 runs the full scene.
-        setFidelity(result.tier >= 2 ? 'high' : 'low', result.gpu)
-      })
-      .catch(() => {
-        // The check failed. Keep the guess.
-      })
-  }
+  const start: Fidelity = override ?? (device === 'mobile' ? 'low' : 'high')
+  useRenderStore.setState({ device, fidelity: start, settings: FIDELITY[start] })
 
   // device follows the window. fidelity does not.
   window.addEventListener('resize', () => {

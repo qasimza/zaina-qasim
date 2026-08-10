@@ -8,7 +8,6 @@ export default function App() {
   const apiStatus = useAppStore((state) => state.apiStatus)
   const device = useRenderStore((state) => state.device)
   const fidelity = useRenderStore((state) => state.fidelity)
-  const gpu = useRenderStore((state) => state.gpu)
   const pixelRatioCap = useRenderStore((state) => state.settings.pixelRatioCap)
 
   return (
@@ -23,7 +22,6 @@ export default function App() {
         <p className="api-status">api: {apiStatus}</p>
         <p className="api-status">
           {device} · {fidelity}
-          {gpu ? ` · ${gpu}` : ''}
         </p>
       </main>
     </>
