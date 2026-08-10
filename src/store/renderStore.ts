@@ -19,15 +19,17 @@ export interface FidelitySettings {
 
 const FIDELITY: Record<Fidelity, FidelitySettings> = {
   low: {
-    pixelRatioCap: 2,
+    // 1.5 keeps text sharp on a phone and renders about half the pixels of 2.
+    pixelRatioCap: 1.5,
     scatterDensity: 0.4,
-    shadowMapSize: 512,
+    // 1024 holds an edge across a wide hillside. 512 shows steps on long shadows.
+    shadowMapSize: 1024,
     postProcessing: false,
   },
   high: {
     pixelRatioCap: 2,
     scatterDensity: 1,
-    shadowMapSize: 1024,
+    shadowMapSize: 2048,
     postProcessing: true,
   },
 }
