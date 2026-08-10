@@ -12,7 +12,11 @@ export default function App() {
 
   return (
     <>
-      {/* Spark asks for antialias: false. WebGL AA does not help splats and costs a lot. */}
+      {/*
+        Spark asks for antialias: false. WebGL AA does not help splats and costs a lot.
+        The camera must not sit on the OrbitControls target, or the view matrix
+        degenerates and nothing renders.
+      */}
       <Canvas
         camera={{ position: [0, 0, 0], fov: 60, near: 0.1, far: 1000 }}
         dpr={[1, pixelRatioCap]}

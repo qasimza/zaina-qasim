@@ -18,6 +18,7 @@ export default function Scene() {
       <Landmark position={[-3, 0, -2]} label="signpost" color="#7a8b5e" />
       <Landmark position={[3, 0, -2]} label="mailbox" color="#4a7fc9" />
 
+      {/* A splat is captured from its origin, so the camera belongs there. */}
       <OrbitControls makeDefault />
     </>
   )

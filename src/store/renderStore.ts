@@ -15,6 +15,19 @@ export interface FidelitySettings {
   shadowMapSize: number
   /** Whether post-processing passes run. */
   postProcessing: boolean
+  /**
+   * Largest on-screen radius a single splat may cover, in pixels. One splat
+   * stretched across the view costs a lot of fill. Capping it is the strongest
+   * lever on splat performance.
+   */
+  splatMaxPixelRadius: number
+  /**
+   * Splats smaller than this are skipped. Raising it drops distant detail that
+   * a visitor cannot see anyway.
+   */
+  splatMinPixelRadius: number
+  /** Reduces detail away from the centre of view. 0 turns foveation off. */
+  splatConeFoveate: number
 }
 
 const FIDELITY: Record<Fidelity, FidelitySettings> = {
@@ -25,12 +38,18 @@ const FIDELITY: Record<Fidelity, FidelitySettings> = {
     // 1024 holds an edge across a wide hillside. 512 shows steps on long shadows.
     shadowMapSize: 1024,
     postProcessing: false,
+    splatMaxPixelRadius: 48,
+    splatMinPixelRadius: 1.5,
+    splatConeFoveate: 0.5,
   },
   high: {
     pixelRatioCap: 2,
     scatterDensity: 1,
     shadowMapSize: 2048,
     postProcessing: true,
+    splatMaxPixelRadius: 128,
+    splatMinPixelRadius: 0.5,
+    splatConeFoveate: 0,
   },
 }
 

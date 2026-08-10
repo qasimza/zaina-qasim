@@ -2,7 +2,8 @@
 // splat pipeline: load time, frame rate, and whether meshes sit in it correctly.
 import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark'
 import { useThree } from '@react-three/fiber'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRenderStore } from '../store/renderStore'
 
 const SPLAT_URL = '/models/landscape.spz'
 
@@ -14,13 +15,17 @@ export default function SplatLandscape({ onLoaded }: Props) {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
   const [splat, setSplat] = useState<SplatMesh | null>(null)
+  const sparkRef = useRef<SparkRenderer | null>(null)
 
+  // Load one time. The 65 MB file must not reload when fidelity changes, so the
+  // quality settings are deliberately not dependencies here.
   useEffect(() => {
     const startedAt = performance.now()
 
     // Spark does work outside the normal render loop, so it needs the renderer.
     const spark = new SparkRenderer({ renderer: gl })
     scene.add(spark)
+    sparkRef.current = spark
 
     const mesh = new SplatMesh({
       url: SPLAT_URL,
@@ -40,9 +45,24 @@ export default function SplatLandscape({ onLoaded }: Props) {
     return () => {
       scene.remove(mesh)
       scene.remove(spark)
+      sparkRef.current = null
       mesh.dispose?.()
     }
   }, [gl, scene, onLoaded])
+
+  // Apply quality settings separately, so a fidelity drop costs nothing.
+  // maxPixelRadius is the strongest lever: it stops one splat covering the
+  // screen and costing a full-screen fill.
+  useEffect(
+    () =>
+      useRenderStore.subscribe((state) => {
+        const spark = sparkRef.current
+        if (!spark) return
+        spark.maxPixelRadius = state.settings.splatMaxPixelRadius
+        spark.minPixelRadius = state.settings.splatMinPixelRadius
+      }),
+    [],
+  )
 
   return splat ? <primitive object={splat} /> : null
 }
