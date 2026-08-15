@@ -74,7 +74,7 @@ export const TERRAIN_SIZE = 700
  * Set back from the shore, so there is hillside in the foreground and the water
  * sits in the middle distance rather than at the camera's feet.
  */
-export const VIEWPOINT = { x: 0, z: 205, eyeHeight: 6 }
+export const VIEWPOINT = { x: 0, z: 110, eyeHeight: 6 }
 
 /** The rise that carries the museum. */
 export const SUMMIT = { x: 34, z: -90 }
