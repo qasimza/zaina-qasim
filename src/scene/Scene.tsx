@@ -36,8 +36,12 @@ export default function Scene() {
 
       {/*
         Full 360 degree rotation. The terrain surrounds the viewpoint and the
-        perimeter rises into distant peaks, so there is no hollow side to find.
-        Only the vertical angle is limited, to keep the camera above ground.
+        perimeter rises into far hills, so there is no hollow side to find.
+
+        Polar angle is measured from straight up. The camera orbits a target one
+        unit ahead, so a larger angle puts the camera below the target and tilts
+        the view upward into the sky. 0.9 stops a little short of straight up,
+        where the controls gimbal.
       */}
       <OrbitControls
         target={[
@@ -47,7 +51,8 @@ export default function Scene() {
         ]}
         enablePan={false}
         enableZoom={false}
-        maxPolarAngle={Math.PI * 0.52}
+        minPolarAngle={Math.PI * 0.12}
+        maxPolarAngle={Math.PI * 0.9}
       />
     </>
   )
