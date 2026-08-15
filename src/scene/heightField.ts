@@ -1,14 +1,11 @@
 /**
- * Height field for the mountain landscape.
+ * Height field for the coastal hillside.
  *
- * The terrain surrounds the viewpoint, so the camera can turn a full circle and
- * always face mountains. Three parts are summed:
+ * Three parts are summed:
  *
- *   1. Ridged fractal noise, which gives sharp crests instead of soft blobs.
- *   2. A rim that lifts the far perimeter into a ring of distant peaks. This
- *      hides the edge of the mesh, so there is no hollow side.
- *   3. A bowl that lowers the ground near the viewpoint, so the camera stands in
- *      a basin and the mountains rise around it.
+ *   1. Ridged fractal noise for rolling hills.
+ *   2. A rim that lifts the far perimeter, so the mesh edge stays hidden.
+ *   3. Soft landforms for the camera hill and the museum rise.
  *
  * Everything is a plain function of (x, z), so the same code gives the mesh its
  * height and tells a prop what height to sit at.
@@ -39,7 +36,7 @@ function noise(x: number, z: number): number {
 
 /**
  * Ridged noise. Folding the value around 1 turns rounded hills into sharp
- * crests, which is what makes a mountain read as a mountain.
+ * crests.
  */
 function ridged(x: number, z: number, octaves = 6): number {
   let total = 0
@@ -65,16 +62,28 @@ function ridged(x: number, z: number, octaves = 6): number {
   return total / normalise
 }
 
+/** Soft gaussian rise. Matches the museum summit and the camera hill. */
+function softRise(x: number, z: number, cx: number, cz: number, spread: number, height: number): number {
+  const d = Math.hypot(x - cx, z - cz)
+  return Math.exp(-(d * d) / spread) * height
+}
+
 /** World size of the terrain, in units. */
 export const TERRAIN_SIZE = 700
 
 /**
- * Where the camera stands, on the open hillside.
+ * Natural hill under the camera. Same soft shape as the other rises — not a
+ * flat plateau or a cliff.
  *
- * Set back from the shore, so there is hillside in the foreground and the water
- * sits in the middle distance rather than at the camera's feet.
+ * Fixed in the world so moving the camera does not move the landform.
  */
-export const VIEWPOINT = { x: 0, z: 110, eyeHeight: 6 }
+export const HILL = { x: 0, z: 100, spread: 9800, height: 44 }
+
+/**
+ * Crest of the hill, a short step seaward of the peak so the view looks down
+ * the slope toward the water.
+ */
+export const VIEWPOINT = { x: 0, z: 86, eyeHeight: 5 }
 
 /** The rise that carries the museum. */
 export const SUMMIT = { x: 34, z: -90 }
@@ -86,8 +95,7 @@ export const SEA_LEVEL = 0
  * How much a position belongs to the sea, from 0 (inland) to 1 (open water).
  *
  * The coast runs across the far side of the scene, so the ocean sits beyond the
- * hills in the direction the camera faces. Hills stop rising there, which is
- * what opens the horizon and lets the water show.
+ * hills in the direction the camera faces.
  */
 export function coastFactor(z: number): number {
   const shoreStart = -150
@@ -97,7 +105,7 @@ export function coastFactor(z: number): number {
 }
 
 /**
- * Coastal hills, not mountains. Rolling ground with one rise for the museum,
+ * Coastal hills. Rolling ground, one rise for the museum, one for the camera,
  * and far hills on every side so a full turn never finds an edge.
  */
 export function terrainHeight(x: number, z: number): number {
@@ -107,47 +115,28 @@ export function terrainHeight(x: number, z: number): number {
   // 1. Rolling hills. Low amplitude, broad wavelength.
   const hills = ridged(x * 0.004 + 17, z * 0.004 + 17, 4) * 34
 
-  // 2. Far hills. Rise at the perimeter to close the horizon, so the mesh edge
-  //    is never visible. They fade out toward the coast, which is what opens
-  //    the view to the water.
+  // 2. Far hills. Rise at the perimeter to close the horizon. They fade out
+  //    toward the coast, which opens the view to the water.
   const rimStart = TERRAIN_SIZE * 0.26
   const rimEnd = TERRAIN_SIZE * 0.5
   const rimT = Math.min(1, Math.max(0, (distance - rimStart) / (rimEnd - rimStart)))
   const rim = smooth(rimT) * 70 * (1 - sea)
 
-  // 3. The museum rise. One deliberate landform, so the eye has a destination.
-  const toSummit = Math.hypot(x - SUMMIT.x, z - SUMMIT.z)
-  const summit = Math.exp(-(toSummit * toSummit) / 5200) * 46
+  // 3. Museum rise.
+  const summit = softRise(x, z, SUMMIT.x, SUMMIT.z, 5200, 46)
 
-  // 4. The viewpoint stands on a flat-topped bluff, not a peak.
-  //
-  //    A rounded hill puts its own summit in the middle of the shot and hides
-  //    the water. A plateau with the camera near its seaward edge gives an open
-  //    foreground, a cliff, and a clear view past it.
-  //
-  //    The plateau is centred on the camera, so the camera stands at the high
-  //    point with the whole vista below it. The flat top runs a short way in
-  //    every direction, then the ground falls away over the cliff.
-  const toBluff = Math.hypot(x - VIEWPOINT.x, z - VIEWPOINT.z)
-  const bluffT = Math.min(1, Math.max(0, (toBluff - 46) / 70))
-  const bluffAmount = 1 - smooth(bluffT)
-  const bluff = bluffAmount * 96
+  // 4. Camera hill. Soft gaussian — same language as the rest of the land.
+  const hill = softRise(x, z, HILL.x, HILL.z, HILL.spread, HILL.height)
 
   // Fine detail, faded out where it cannot be seen.
   const detailFade = Math.max(0, 1 - distance / 320)
   const detail = ridged(x * 0.03, z * 0.03, 3) * 3.5 * detailFade
 
-  // 5. The land descends from the bluff to the shore. Hill amplitude is cut
-  //    hard in front of the camera, so nothing rises into the middle of the
-  //    shot between the cliff edge and the water.
-  const descent = Math.min(1, Math.max(0, (z + 170) / (VIEWPOINT.z + 170)))
-  const seaward = 0.06 + 0.94 * descent * descent
+  // 5. Land eases toward the shore so rolling ground does not block the water.
+  const descent = Math.min(1, Math.max(0, (z + 170) / (HILL.z + 170)))
+  const seaward = 0.18 + 0.82 * descent * descent
 
-  // The plateau top must be genuinely flat. Left alone, the noise raises ground
-  // a short way ahead above the camera's own footing and blocks the vista.
-  const flatten = 1 - bluffAmount * 0.92
-
-  const land = (hills + detail) * seaward * flatten + rim + summit * seaward + bluff + 46
+  const land = (hills + detail) * seaward + rim + summit * seaward + hill + 28
 
   // Toward the coast the ground drops below sea level, so the shoreline is a
   // real crossing rather than a drawn line.

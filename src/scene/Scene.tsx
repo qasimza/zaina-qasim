@@ -1,10 +1,9 @@
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
-import CameraRig from './CameraRig'
+import CameraRig, { lookTarget } from './CameraRig'
 import Ocean from './Ocean'
 import Sky, { HORIZON_COLOUR } from './Sky'
 import Terrain from './Terrain'
-import { VIEWPOINT, terrainHeight } from './heightField'
 import { useRenderStore } from '../store/renderStore'
 
 /** Low sun, raking across the hills from the left. */
@@ -37,21 +36,15 @@ export default function Scene() {
         Full 360 degree rotation. The terrain surrounds the viewpoint and the
         perimeter rises into far hills, so there is no hollow side to find.
 
-        Polar angle is measured from straight up. The camera orbits a target one
-        unit ahead, so a larger angle puts the camera below the target and tilts
-        the view upward into the sky. 0.9 stops a little short of straight up,
-        where the controls gimbal.
+        The target sits down the seaward slope, so the default view looks toward
+        the ocean. Polar angle is measured from straight up.
       */}
       <OrbitControls
-        target={[
-          VIEWPOINT.x,
-          terrainHeight(VIEWPOINT.x, VIEWPOINT.z) + VIEWPOINT.eyeHeight,
-          VIEWPOINT.z - 1,
-        ]}
+        target={lookTarget()}
         enablePan={false}
         enableZoom={false}
-        minPolarAngle={Math.PI * 0.12}
-        maxPolarAngle={Math.PI * 0.9}
+        minPolarAngle={Math.PI * 0.2}
+        maxPolarAngle={Math.PI * 0.72}
       />
     </>
   )
