@@ -30,4 +30,3 @@ dist-ssr
 .dev.vars*
 
 # large test assets - not committed
-public/models/

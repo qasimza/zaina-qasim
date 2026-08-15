@@ -12,15 +12,11 @@ export default function App() {
 
   return (
     <>
-      {/*
-        Spark asks for antialias: false. WebGL AA does not help splats and costs a lot.
-        The camera must not sit on the OrbitControls target, or the view matrix
-        degenerates and nothing renders.
-      */}
+      {/* Camera stands low on the path, looking up the slope toward the summit. */}
       <Canvas
-        camera={{ position: [0, 0, 0], fov: 60, near: 0.1, far: 1000 }}
+        shadows
+        camera={{ position: [2, 14, 60], fov: 50, near: 0.5, far: 400 }}
         dpr={[1, pixelRatioCap]}
-        gl={{ antialias: false }}
       >
         <PerformanceMonitor onDecline={dropFidelity} flipflops={2} onFallback={dropFidelity}>
           <Scene />
