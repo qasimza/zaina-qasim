@@ -74,7 +74,7 @@ Each stored record carries the **visitor context**: IP address, country, city, u
 
 1. **Contact messages** (M3) — name, email, message, timestamp, visitor context. The sender gives their email on purpose. Follow-up from this table is acceptable.
 2. **Twin chat transcripts** (M5) — the Worker logs each conversation: a random conversation id, timestamps, the messages, and the visitor context. Purpose: review what visitors ask, improve the persona. The chat UI must show a short notice: "conversations are recorded". Design this notice into M5 from the start.
-3. **Analytics events** (optional, later) — section visits, twin opens, resume clicks, with visitor context. Start with one D1 events table. Move to Workers Analytics Engine only if the row volume becomes a problem. No third-party analytics script.
+3. **Analytics events** (optional, later) — section visits, twin opens, resume clicks, with visitor context. Start with one D1 events table. Move to Workers Analytics Engine only if the row volume becomes a problem.
 
 The site sets no cookies today. A cookie-based visitor id comes later, for cross-session tracking and returning-visitor memory.
 

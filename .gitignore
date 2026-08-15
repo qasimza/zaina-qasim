@@ -28,3 +28,8 @@ dist-ssr
 
 # local secrets for wrangler dev - never commit
 .dev.vars*
+
+# large test assets - not committed
+
+# editor config
+.cursor/
