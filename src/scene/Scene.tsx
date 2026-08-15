@@ -4,7 +4,7 @@ import CameraRig from './CameraRig'
 import Ocean from './Ocean'
 import Sky, { HORIZON_COLOUR } from './Sky'
 import Terrain from './Terrain'
-import { SUMMIT, VIEWPOINT, terrainHeight } from './heightField'
+import { VIEWPOINT, terrainHeight } from './heightField'
 import { useRenderStore } from '../store/renderStore'
 
 /** Low sun, raking across the hills from the left. */
@@ -30,12 +30,6 @@ export default function Scene() {
 
       <Ocean sunDirection={SUN} fogDensity={FOG_DENSITY} />
       <Terrain segments={segments} />
-
-      {/* Museum placeholder on its summit. */}
-      <mesh position={[SUMMIT.x, terrainHeight(SUMMIT.x, SUMMIT.z) + 6, SUMMIT.z]}>
-        <boxGeometry args={[26, 12, 20]} />
-        <meshStandardMaterial color="#d8cbb4" roughness={0.9} />
-      </mesh>
 
       <CameraRig />
 

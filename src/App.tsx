@@ -18,7 +18,7 @@ export default function App() {
       */}
       <Canvas
         shadows
-        camera={{ position: [2, 14, 60], fov: 50, near: 0.5, far: 4000 }}
+        camera={{ position: [2, 14, 60], fov: 64, near: 0.5, far: 4000 }}
         dpr={[1, pixelRatioCap]}
       >
         <PerformanceMonitor onDecline={dropFidelity} flipflops={2} onFallback={dropFidelity}>
