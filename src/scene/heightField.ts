@@ -125,11 +125,13 @@ export function terrainHeight(x: number, z: number): number {
   //    the water. A plateau with the camera near its seaward edge gives an open
   //    foreground, a cliff, and a clear view past it.
   //
-  //    The plateau centre sits behind the camera, so the camera is close to the
-  //    front edge and the ground falls away just ahead of it.
-  const toBluff = Math.hypot(x - VIEWPOINT.x, z - (VIEWPOINT.z + 95))
-  const bluffT = Math.min(1, Math.max(0, (toBluff - 78) / 62))
-  const bluff = (1 - smooth(bluffT)) * 86
+  //    The plateau is centred on the camera, so the camera stands at the high
+  //    point with the whole vista below it. The flat top runs a short way in
+  //    every direction, then the ground falls away over the cliff.
+  const toBluff = Math.hypot(x - VIEWPOINT.x, z - VIEWPOINT.z)
+  const bluffT = Math.min(1, Math.max(0, (toBluff - 46) / 70))
+  const bluffAmount = 1 - smooth(bluffT)
+  const bluff = bluffAmount * 96
 
   // Fine detail, faded out where it cannot be seen.
   const detailFade = Math.max(0, 1 - distance / 320)
@@ -141,7 +143,11 @@ export function terrainHeight(x: number, z: number): number {
   const descent = Math.min(1, Math.max(0, (z + 170) / (VIEWPOINT.z + 170)))
   const seaward = 0.06 + 0.94 * descent * descent
 
-  const land = (hills + detail) * seaward + rim + summit * seaward + bluff + 46
+  // The plateau top must be genuinely flat. Left alone, the noise raises ground
+  // a short way ahead above the camera's own footing and blocks the vista.
+  const flatten = 1 - bluffAmount * 0.92
+
+  const land = (hills + detail) * seaward * flatten + rim + summit * seaward + bluff + 46
 
   // Toward the coast the ground drops below sea level, so the shoreline is a
   // real crossing rather than a drawn line.
