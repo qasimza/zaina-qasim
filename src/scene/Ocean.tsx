@@ -111,10 +111,11 @@ void main() {
   colour += uSunColour * glint * 1.6;
 
   // Match the scene fog, so the far water melts into the horizon and the plane
-  // edge never shows.
+  // edge never shows. The blend is capped below 1, so the sea keeps a trace of
+  // its own colour all the way out and never becomes a flat band of haze.
   float dist = length(cameraPosition - vWorldPosition);
   float fog = 1.0 - exp(-dist * dist * uFogDensity * uFogDensity);
-  colour = mix(colour, uFogColour, clamp(fog, 0.0, 1.0));
+  colour = mix(colour, uFogColour, clamp(fog, 0.0, 0.82));
 
   gl_FragColor = vec4(colour, 1.0);
 }
