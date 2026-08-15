@@ -114,16 +114,21 @@ export function terrainHeight(x: number, z: number): number {
   const toSummit = Math.hypot(x - SUMMIT.x, z - SUMMIT.z)
   const summit = Math.exp(-(toSummit * toSummit) / 5200) * 46
 
-  // 4. A shallow bowl at the viewpoint, so the camera is not buried.
-  const clearing = Math.exp(-(Math.hypot(x - VIEWPOINT.x, z - VIEWPOINT.z) ** 2) / 5000) * 16
+  // 4. The viewpoint is a promontory, not a hollow. A vista needs high ground,
+  //    or the next hill blocks the water.
+  const toViewpoint = Math.hypot(x - VIEWPOINT.x, z - VIEWPOINT.z)
+  const promontory = Math.exp(-(toViewpoint * toViewpoint) / 9000) * 58
 
   // Fine detail, faded out where it cannot be seen.
   const detailFade = Math.max(0, 1 - distance / 320)
   const detail = ridged(x * 0.03, z * 0.03, 3) * 3.5 * detailFade
 
-  // Land sits above the sea. The whole landmass is lifted, so the viewpoint
-  // looks down on the water rather than standing level with it.
-  const land = hills + rim + summit - clearing + detail + 55
+  // 5. The land descends from the viewpoint to the shore. Without this the
+  //    intervening hills stand higher than the camera and hide the sea.
+  const descent = Math.min(1, Math.max(0, (z + 170) / (VIEWPOINT.z + 170)))
+  const seaward = 0.18 + 0.82 * descent
+
+  const land = (hills + detail) * seaward + rim + summit * seaward + promontory + 46
 
   // Toward the coast the ground drops below sea level, so the shoreline is a
   // real crossing rather than a drawn line.
