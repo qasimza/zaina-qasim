@@ -66,33 +66,41 @@ function ridged(x: number, z: number, octaves = 6): number {
 }
 
 /** World size of the terrain, in units. */
-export const TERRAIN_SIZE = 900
+export const TERRAIN_SIZE = 700
 
-/** Where the camera stands. The basin centre. */
-export const VIEWPOINT = { x: 0, z: 0, eyeHeight: 12 }
+/** Where the camera stands, on the open hillside. */
+export const VIEWPOINT = { x: 0, z: 40, eyeHeight: 6 }
 
-/** The summit that carries the museum. */
-export const SUMMIT = { x: 78, z: -132 }
+/** The rise that carries the museum. */
+export const SUMMIT = { x: 34, z: -90 }
 
+/**
+ * Coastal hills, not mountains. Rolling ground with one rise for the museum,
+ * and far hills on every side so a full turn never finds an edge.
+ */
 export function terrainHeight(x: number, z: number): number {
   const distance = Math.hypot(x, z)
 
-  // 1. Mountains everywhere.
-  const mountains = ridged(x * 0.0022 + 17, z * 0.0022 + 17) * 190
+  // 1. Rolling hills. Low amplitude, broad wavelength.
+  const hills = ridged(x * 0.004 + 17, z * 0.004 + 17, 4) * 34
 
-  // 2. Rim. Lifts the far perimeter so the mesh edge is never visible.
-  const rimStart = TERRAIN_SIZE * 0.24
-  const rimEnd = TERRAIN_SIZE * 0.52
+  // 2. Far hills. Rise gently at the perimeter to close the horizon, so the
+  //    mesh edge is never visible from the viewpoint.
+  const rimStart = TERRAIN_SIZE * 0.26
+  const rimEnd = TERRAIN_SIZE * 0.5
   const rimT = Math.min(1, Math.max(0, (distance - rimStart) / (rimEnd - rimStart)))
-  const rim = smooth(rimT) * 260
+  const rim = smooth(rimT) * 70
 
-  // 3. Basin. Lowers the ground near the viewpoint so the camera has somewhere
-  //    to stand and the peaks rise above it.
-  const basin = Math.exp(-(distance * distance) / 14000) * 120
+  // 3. The museum rise. One deliberate landform, so the eye has a destination.
+  const toSummit = Math.hypot(x - SUMMIT.x, z - SUMMIT.z)
+  const summit = Math.exp(-(toSummit * toSummit) / 5200) * 46
 
-  // Fine detail, faded out at distance where it cannot be seen.
-  const detailFade = Math.max(0, 1 - distance / 420)
-  const detail = ridged(x * 0.02, z * 0.02, 3) * 9 * detailFade
+  // 4. A shallow bowl at the viewpoint, so the camera is not buried.
+  const clearing = Math.exp(-(Math.hypot(x - VIEWPOINT.x, z - VIEWPOINT.z) ** 2) / 5000) * 16
 
-  return mountains + rim - basin + detail
+  // Fine detail, faded out where it cannot be seen.
+  const detailFade = Math.max(0, 1 - distance / 320)
+  const detail = ridged(x * 0.03, z * 0.03, 3) * 3.5 * detailFade
+
+  return hills + rim + summit - clearing + detail
 }

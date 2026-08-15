@@ -12,10 +12,13 @@ export default function App() {
 
   return (
     <>
-      {/* Camera stands low on the path, looking up the slope toward the summit. */}
+      {/*
+        CameraRig sets the real position. The far plane must exceed the sky dome
+        radius, or the dome falls outside the frustum and no sky is drawn.
+      */}
       <Canvas
         shadows
-        camera={{ position: [2, 14, 60], fov: 50, near: 0.5, far: 400 }}
+        camera={{ position: [2, 14, 60], fov: 50, near: 0.5, far: 4000 }}
         dpr={[1, pixelRatioCap]}
       >
         <PerformanceMonitor onDecline={dropFidelity} flipflops={2} onFallback={dropFidelity}>

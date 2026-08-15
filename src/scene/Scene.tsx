@@ -40,12 +40,14 @@ export default function Scene() {
         Only the vertical angle is limited, to keep the camera above ground.
       */}
       <OrbitControls
-        target={[VIEWPOINT.x, terrainHeight(VIEWPOINT.x, VIEWPOINT.z) + 40, VIEWPOINT.z]}
+        target={[
+          VIEWPOINT.x,
+          terrainHeight(VIEWPOINT.x, VIEWPOINT.z) + VIEWPOINT.eyeHeight,
+          VIEWPOINT.z - 1,
+        ]}
         enablePan={false}
-        minDistance={5}
-        maxDistance={260}
-        minPolarAngle={Math.PI * 0.12}
-        maxPolarAngle={Math.PI * 0.495}
+        enableZoom={false}
+        maxPolarAngle={Math.PI * 0.52}
       />
     </>
   )

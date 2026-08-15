@@ -13,7 +13,7 @@ export default function CameraRig() {
 
   useLayoutEffect(() => {
     const groundY = terrainHeight(VIEWPOINT.x, VIEWPOINT.z)
-    camera.position.set(VIEWPOINT.x + 120, groundY + VIEWPOINT.eyeHeight + 70, VIEWPOINT.z + 150)
+    camera.position.set(VIEWPOINT.x, groundY + VIEWPOINT.eyeHeight, VIEWPOINT.z)
     camera.updateProjectionMatrix()
   }, [camera])
 
