@@ -37,23 +37,66 @@ uniform float uFogDensity;
 varying vec2 vWorldXZ;
 varying vec3 vWorldPosition;
 
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float valueNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+    f.y
+  );
+}
+
+/**
+ * Wave height field.
+ *
+ * Crossed sine waves produce a regular diamond lattice, which reads as a
+ * pattern rather than as water. Layered noise, with the sample point warped by
+ * a lower layer, breaks that up. Each octave also drifts in its own direction,
+ * so no single flow direction dominates.
+ */
+float waves(vec2 p, float time) {
+  float total = 0.0;
+  float amplitude = 1.0;
+  float frequency = 1.0;
+  float normalise = 0.0;
+  vec2 drift = vec2(1.0, 0.6);
+
+  for (int i = 0; i < 4; i++) {
+    // Warp the sample point by the previous layer, so crests bend.
+    vec2 q = p * frequency + drift * time * (0.35 + float(i) * 0.11);
+    q += vec2(total * 0.4, total * 0.3);
+    total += (valueNoise(q) - 0.5) * amplitude;
+    normalise += amplitude;
+    amplitude *= 0.52;
+    frequency *= 2.17;   // not a whole ratio, so octaves never line up
+    drift = vec2(drift.y, -drift.x);
+  }
+
+  return total / normalise;
+}
+
 void main() {
   vec3 viewDir = normalize(cameraPosition - vWorldPosition);
 
-  // Two crossing wave fields, at different scales and speeds. Summing them
-  // stops any single direction reading as a repeating pattern.
-  vec2 p = vWorldXZ * 0.05;
-  float waveA = sin(p.x * 1.7 + uTime * 0.9) * cos(p.y * 1.3 - uTime * 0.6);
-  float waveB = sin((p.x + p.y) * 3.1 - uTime * 1.4) * 0.5;
-  float waveC = sin(p.y * 6.2 + uTime * 2.1) * 0.18;
+  vec2 p = vWorldXZ * 0.035;
 
-  // Build a normal from the wave slopes. Y stays large so the surface stays
-  // broadly flat and only glints, rather than looking like crumpled foil.
-  vec3 normal = normalize(vec3(
-    (waveA + waveB + waveC) * 0.06,
-    1.0,
-    (waveB - waveA + waveC) * 0.06
-  ));
+  // Sample the wave field either side of this point to get the slope, which is
+  // what the normal is built from.
+  float e = 0.06;
+  float centre = waves(p, uTime);
+  float slopeX = waves(p + vec2(e, 0.0), uTime) - centre;
+  float slopeZ = waves(p + vec2(0.0, e), uTime) - centre;
+
+  // Y stays large so the surface reads as broadly flat and only glints, rather
+  // than looking like crumpled foil.
+  vec3 normal = normalize(vec3(slopeX * 9.0, 1.0, slopeZ * 9.0));
+  float waveA = centre;
 
   // Fresnel. Water is dark looking straight down and mirror-like at a glancing
   // angle. This single term is what makes it read as water rather than paint.
