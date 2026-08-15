@@ -119,21 +119,29 @@ export function terrainHeight(x: number, z: number): number {
   const toSummit = Math.hypot(x - SUMMIT.x, z - SUMMIT.z)
   const summit = Math.exp(-(toSummit * toSummit) / 5200) * 46
 
-  // 4. The viewpoint is a promontory, not a hollow. A vista needs high ground,
-  //    or the next hill blocks the water.
-  const toViewpoint = Math.hypot(x - VIEWPOINT.x, z - VIEWPOINT.z)
-  const promontory = Math.exp(-(toViewpoint * toViewpoint) / 11000) * 76
+  // 4. The viewpoint stands on a flat-topped bluff, not a peak.
+  //
+  //    A rounded hill puts its own summit in the middle of the shot and hides
+  //    the water. A plateau with the camera near its seaward edge gives an open
+  //    foreground, a cliff, and a clear view past it.
+  //
+  //    The plateau centre sits behind the camera, so the camera is close to the
+  //    front edge and the ground falls away just ahead of it.
+  const toBluff = Math.hypot(x - VIEWPOINT.x, z - (VIEWPOINT.z + 95))
+  const bluffT = Math.min(1, Math.max(0, (toBluff - 78) / 62))
+  const bluff = (1 - smooth(bluffT)) * 86
 
   // Fine detail, faded out where it cannot be seen.
   const detailFade = Math.max(0, 1 - distance / 320)
   const detail = ridged(x * 0.03, z * 0.03, 3) * 3.5 * detailFade
 
-  // 5. The land descends from the viewpoint to the shore. Without this the
-  //    intervening hills stand higher than the camera and hide the sea.
+  // 5. The land descends from the bluff to the shore. Hill amplitude is cut
+  //    hard in front of the camera, so nothing rises into the middle of the
+  //    shot between the cliff edge and the water.
   const descent = Math.min(1, Math.max(0, (z + 170) / (VIEWPOINT.z + 170)))
-  const seaward = 0.18 + 0.82 * descent
+  const seaward = 0.06 + 0.94 * descent * descent
 
-  const land = (hills + detail) * seaward + rim + summit * seaward + promontory + 46
+  const land = (hills + detail) * seaward + rim + summit * seaward + bluff + 46
 
   // Toward the coast the ground drops below sea level, so the shoreline is a
   // real crossing rather than a drawn line.
