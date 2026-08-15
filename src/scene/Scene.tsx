@@ -1,13 +1,17 @@
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import CameraRig from './CameraRig'
+import Ocean from './Ocean'
 import Sky, { HORIZON_COLOUR } from './Sky'
 import Terrain from './Terrain'
 import { SUMMIT, VIEWPOINT, terrainHeight } from './heightField'
 import { useRenderStore } from '../store/renderStore'
 
-/** Low sun, raking across the peaks from the left. */
+/** Low sun, raking across the hills from the left. */
 const SUN = new THREE.Vector3(-180, 90, 60)
+
+/** Shared by the scene fog and the ocean shader, so the two always agree. */
+const FOG_DENSITY = 0.0016
 
 export default function Scene() {
   const fidelity = useRenderStore((state) => state.fidelity)
@@ -22,8 +26,9 @@ export default function Scene() {
       <directionalLight position={SUN.toArray()} intensity={2.2} color="#ffdcaa" />
 
       {/* Fog matches the sky horizon, so distant peaks dissolve into it. */}
-      <fogExp2 attach="fog" args={[HORIZON_COLOUR.getHex(), 0.0016]} />
+      <fogExp2 attach="fog" args={[HORIZON_COLOUR.getHex(), FOG_DENSITY]} />
 
+      <Ocean sunDirection={SUN} fogDensity={FOG_DENSITY} />
       <Terrain segments={segments} />
 
       {/* Museum placeholder on its summit. */}

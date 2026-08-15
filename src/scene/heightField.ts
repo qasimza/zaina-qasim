@@ -74,22 +74,41 @@ export const VIEWPOINT = { x: 0, z: 40, eyeHeight: 6 }
 /** The rise that carries the museum. */
 export const SUMMIT = { x: 34, z: -90 }
 
+/** Height of the ocean surface. Land is measured against this. */
+export const SEA_LEVEL = 0
+
+/**
+ * How much a position belongs to the sea, from 0 (inland) to 1 (open water).
+ *
+ * The coast runs across the far side of the scene, so the ocean sits beyond the
+ * hills in the direction the camera faces. Hills stop rising there, which is
+ * what opens the horizon and lets the water show.
+ */
+export function coastFactor(z: number): number {
+  const shoreStart = -150
+  const shoreEnd = -330
+  const t = Math.min(1, Math.max(0, (z - shoreStart) / (shoreEnd - shoreStart)))
+  return smooth(t)
+}
+
 /**
  * Coastal hills, not mountains. Rolling ground with one rise for the museum,
  * and far hills on every side so a full turn never finds an edge.
  */
 export function terrainHeight(x: number, z: number): number {
   const distance = Math.hypot(x, z)
+  const sea = coastFactor(z)
 
   // 1. Rolling hills. Low amplitude, broad wavelength.
   const hills = ridged(x * 0.004 + 17, z * 0.004 + 17, 4) * 34
 
-  // 2. Far hills. Rise gently at the perimeter to close the horizon, so the
-  //    mesh edge is never visible from the viewpoint.
+  // 2. Far hills. Rise at the perimeter to close the horizon, so the mesh edge
+  //    is never visible. They fade out toward the coast, which is what opens
+  //    the view to the water.
   const rimStart = TERRAIN_SIZE * 0.26
   const rimEnd = TERRAIN_SIZE * 0.5
   const rimT = Math.min(1, Math.max(0, (distance - rimStart) / (rimEnd - rimStart)))
-  const rim = smooth(rimT) * 70
+  const rim = smooth(rimT) * 70 * (1 - sea)
 
   // 3. The museum rise. One deliberate landform, so the eye has a destination.
   const toSummit = Math.hypot(x - SUMMIT.x, z - SUMMIT.z)
@@ -102,5 +121,11 @@ export function terrainHeight(x: number, z: number): number {
   const detailFade = Math.max(0, 1 - distance / 320)
   const detail = ridged(x * 0.03, z * 0.03, 3) * 3.5 * detailFade
 
-  return hills + rim + summit - clearing + detail
+  // Land sits above the sea. The whole landmass is lifted, so the viewpoint
+  // looks down on the water rather than standing level with it.
+  const land = hills + rim + summit - clearing + detail + 55
+
+  // Toward the coast the ground drops below sea level, so the shoreline is a
+  // real crossing rather than a drawn line.
+  return land * (1 - sea) + sea * -30
 }
