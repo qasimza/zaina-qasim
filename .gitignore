@@ -30,3 +30,6 @@ dist-ssr
 .dev.vars*
 
 # large test assets - not committed
+
+# editor config
+.cursor/
