@@ -1,19 +1,23 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import { TERRAIN_SIZE, pathBlend, terrainHeight } from './heightField'
+import { TERRAIN_SIZE, terrainHeight } from './heightField'
 
-/** Palette, from the locked art direction. */
-const PATH_COLOUR = new THREE.Color('#c9b79a') // pale gravel
-const GRASS_LOW = new THREE.Color('#8d9464') // sage
-const GRASS_HIGH = new THREE.Color('#c2ab6e') // dry gold
-const ROCK = new THREE.Color('#a89887') // exposed stone
+/**
+ * Palette. Colour is chosen by height and by slope, not height alone. Slope is
+ * what separates a grassy shoulder from a bare rock face at the same altitude.
+ */
+const GRASS = new THREE.Color('#7f8a5a')
+const DRY_GRASS = new THREE.Color('#b3a06a')
+const ROCK = new THREE.Color('#8e8579')
+const ROCK_DARK = new THREE.Color('#6b6459')
+const SNOW = new THREE.Color('#e8e9ec')
 
 interface Props {
   /** Vertices per side. More gives finer relief and costs more. */
   segments?: number
 }
 
-export default function Terrain({ segments = 200 }: Props) {
+export default function Terrain({ segments = 300 }: Props) {
   const geometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, segments, segments)
     geo.rotateX(-Math.PI / 2)
@@ -21,6 +25,7 @@ export default function Terrain({ segments = 200 }: Props) {
     const position = geo.attributes.position
     const colours = new Float32Array(position.count * 3)
     const colour = new THREE.Color()
+    const step = TERRAIN_SIZE / segments
 
     for (let i = 0; i < position.count; i++) {
       const x = position.getX(i)
@@ -28,16 +33,26 @@ export default function Terrain({ segments = 200 }: Props) {
       const height = terrainHeight(x, z)
       position.setY(i, height)
 
-      // Colour by height: sage low down, dry gold higher up.
-      const t = THREE.MathUtils.clamp(height / 40, 0, 1)
-      colour.copy(GRASS_LOW).lerp(GRASS_HIGH, t)
+      // Slope, as the rise over one grid step in each direction.
+      const dx = terrainHeight(x + step, z) - height
+      const dz = terrainHeight(x, z + step) - height
+      const slope = Math.hypot(dx, dz) / step
 
-      // Steep faces show rock.
-      const slope = Math.abs(terrainHeight(x + 1, z) - height)
-      if (slope > 1.2) colour.lerp(ROCK, Math.min(1, (slope - 1.2) * 0.8))
+      // Grass low down, drying out as it climbs.
+      const dryness = THREE.MathUtils.clamp((height - 40) / 90, 0, 1)
+      colour.copy(GRASS).lerp(DRY_GRASS, dryness)
 
-      // Blend toward gravel across the path edge, never a hard cut.
-      colour.lerp(PATH_COLOUR, pathBlend(x, z))
+      // Steep ground loses its cover and shows rock.
+      const rockAmount = THREE.MathUtils.clamp((slope - 0.45) * 1.6, 0, 1)
+      const rockShade = ROCK.clone().lerp(ROCK_DARK, THREE.MathUtils.clamp(slope - 1, 0, 1))
+      colour.lerp(rockShade, rockAmount)
+
+      // Snow on high ground, but only where it can settle.
+      const snowLine = 190 + Math.sin(x * 0.01) * 18
+      const snowAmount =
+        THREE.MathUtils.clamp((height - snowLine) / 60, 0, 1) *
+        THREE.MathUtils.clamp(1 - (slope - 0.6) * 1.1, 0, 1)
+      colour.lerp(SNOW, snowAmount)
 
       colours[i * 3] = colour.r
       colours[i * 3 + 1] = colour.g
@@ -50,8 +65,8 @@ export default function Terrain({ segments = 200 }: Props) {
   }, [segments])
 
   return (
-    <mesh geometry={geometry} receiveShadow castShadow>
-      <meshStandardMaterial vertexColors roughness={1} metalness={0} />
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial vertexColors roughness={0.95} metalness={0} />
     </mesh>
   )
 }

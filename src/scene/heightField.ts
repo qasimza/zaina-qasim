@@ -1,16 +1,19 @@
 /**
- * Height field for the coastal hillside.
+ * Height field for the mountain landscape.
  *
- * The shape is built from three parts, added together:
- *   1. A ridge that climbs from the foreground to a summit, where the museum sits.
- *   2. Fractal noise, for natural roughness.
- *   3. A carved trench along the path, so the path reads as a cut into the slope.
+ * The terrain surrounds the viewpoint, so the camera can turn a full circle and
+ * always face mountains. Three parts are summed:
  *
- * Everything is a plain function of (x, z), so the same code gives the terrain
- * mesh its height and tells a prop what height to sit at.
+ *   1. Ridged fractal noise, which gives sharp crests instead of soft blobs.
+ *   2. A rim that lifts the far perimeter into a ring of distant peaks. This
+ *      hides the edge of the mesh, so there is no hollow side.
+ *   3. A bowl that lowers the ground near the viewpoint, so the camera stands in
+ *      a basin and the mountains rise around it.
+ *
+ * Everything is a plain function of (x, z), so the same code gives the mesh its
+ * height and tells a prop what height to sit at.
  */
 
-/** Deterministic pseudo-random value for a lattice point. */
 function hash(x: number, z: number): number {
   const n = Math.sin(x * 127.1 + z * 311.7) * 43758.5453123
   return n - Math.floor(n)
@@ -20,7 +23,6 @@ function smooth(t: number): number {
   return t * t * (3 - 2 * t)
 }
 
-/** Value noise, one octave. */
 function noise(x: number, z: number): number {
   const xi = Math.floor(x)
   const zi = Math.floor(z)
@@ -35,75 +37,62 @@ function noise(x: number, z: number): number {
   return a + (b - a) * xf + (c - a) * zf + (a - b - c + d) * xf * zf
 }
 
-/** Fractal noise. Each octave doubles the frequency and halves the amplitude. */
-function fbm(x: number, z: number, octaves = 4): number {
+/**
+ * Ridged noise. Folding the value around 1 turns rounded hills into sharp
+ * crests, which is what makes a mountain read as a mountain.
+ */
+function ridged(x: number, z: number, octaves = 6): number {
   let total = 0
   let amplitude = 1
   let frequency = 1
   let normalise = 0
+  // Rotating between octaves stops the ridges lining up on the grid axes.
+  let px = x
+  let pz = z
 
   for (let i = 0; i < octaves; i++) {
-    total += noise(x * frequency, z * frequency) * amplitude
+    const n = 1 - Math.abs(noise(px * frequency, pz * frequency) * 2 - 1)
+    total += n * n * amplitude
     normalise += amplitude
-    amplitude *= 0.5
-    frequency *= 2
+    amplitude *= 0.48
+    frequency *= 2.03
+    const rx = px * 0.8 - pz * 0.6
+    const rz = px * 0.6 + pz * 0.8
+    px = rx
+    pz = rz
   }
 
   return total / normalise
 }
 
 /** World size of the terrain, in units. */
-export const TERRAIN_SIZE = 200
+export const TERRAIN_SIZE = 900
 
-/** The summit sits at the far end of the ridge. The museum goes here. */
-export const SUMMIT = { x: 6, z: -70 }
+/** Where the camera stands. The basin centre. */
+export const VIEWPOINT = { x: 0, z: 0, eyeHeight: 12 }
 
-/**
- * Centre line of the path, as a function of depth.
- * The path curves, so the eye follows it rather than running straight up.
- */
-export function pathCentreX(z: number): number {
-  const t = (z + 90) / 120 // 0 in the foreground, 1 near the summit
-  return Math.sin(t * Math.PI * 1.1) * 14 + t * SUMMIT.x
-}
+/** The summit that carries the museum. */
+export const SUMMIT = { x: 78, z: -132 }
 
-/** Where the camera stands on the path, and what it looks at. */
-export const VIEWPOINT = { x: pathCentreX(58), z: 58, eyeHeight: 9 }
-
-/** Terrain height at a world position. */
 export function terrainHeight(x: number, z: number): number {
-  // 1. The ridge. Rises toward the summit, falls away to the sides.
-  const alongRidge = Math.max(0, (-z + 90) / 160)
-  const distanceFromSpine = Math.abs(x - pathCentreX(z))
-  const shoulder = Math.exp(-(distanceFromSpine * distanceFromSpine) / 3200)
-  const ridge = alongRidge * alongRidge * 46 * (0.35 + 0.65 * shoulder)
+  const distance = Math.hypot(x, z)
 
-  // 2. Roughness. Broad folds, then finer detail on top of them.
-  const folds = fbm(x * 0.018 + 40, z * 0.018 + 40) * 9
-  const rough = fbm(x * 0.055 + 11, z * 0.055 + 11, 3) * 3
-  const fine = fbm(x * 0.16, z * 0.16, 2) * 1
+  // 1. Mountains everywhere.
+  const mountains = ridged(x * 0.0022 + 17, z * 0.0022 + 17) * 190
 
-  // 3. The path. A shallow trench that also flattens the ground it runs over,
-  //    so the walking surface stays smooth while the hillside stays rough.
-  const pathWidth = 5.5 - alongRidge * 2
-  const trench = Math.exp(-(distanceFromSpine * distanceFromSpine) / (pathWidth * pathWidth))
-  const detail = (folds + rough + fine) * (1 - trench * 0.85)
+  // 2. Rim. Lifts the far perimeter so the mesh edge is never visible.
+  const rimStart = TERRAIN_SIZE * 0.24
+  const rimEnd = TERRAIN_SIZE * 0.52
+  const rimT = Math.min(1, Math.max(0, (distance - rimStart) / (rimEnd - rimStart)))
+  const rim = smooth(rimT) * 260
 
-  return ridge + detail - trench * 2.6
-}
+  // 3. Basin. Lowers the ground near the viewpoint so the camera has somewhere
+  //    to stand and the peaks rise above it.
+  const basin = Math.exp(-(distance * distance) / 14000) * 120
 
-/**
- * How much a position belongs to the path, from 0 (hillside) to 1 (path centre).
- *
- * This is deliberately a smooth ramp, not a boolean. A hard cut makes the path
- * edge follow the vertex grid, which reads as a staircase.
- */
-export function pathBlend(x: number, z: number): number {
-  const distance = Math.abs(x - pathCentreX(z))
-  const inner = 2.4 // fully path
-  const outer = 5.2 // fully hillside
-  if (distance <= inner) return 1
-  if (distance >= outer) return 0
-  const t = 1 - (distance - inner) / (outer - inner)
-  return t * t * (3 - 2 * t)
+  // Fine detail, faded out at distance where it cannot be seen.
+  const detailFade = Math.max(0, 1 - distance / 420)
+  const detail = ridged(x * 0.02, z * 0.02, 3) * 9 * detailFade
+
+  return mountains + rim - basin + detail
 }

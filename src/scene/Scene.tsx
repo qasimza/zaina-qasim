@@ -1,57 +1,51 @@
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import CameraRig from './CameraRig'
+import Sky, { HORIZON_COLOUR } from './Sky'
 import Terrain from './Terrain'
-import { SUMMIT, terrainHeight } from './heightField'
+import { SUMMIT, VIEWPOINT, terrainHeight } from './heightField'
 import { useRenderStore } from '../store/renderStore'
 
-/** Golden-hour sun, low and raking across the slope from the left. */
-const SUN = new THREE.Vector3(-60, 45, 30)
+/** Low sun, raking across the peaks from the left. */
+const SUN = new THREE.Vector3(-180, 90, 60)
 
 export default function Scene() {
   const fidelity = useRenderStore((state) => state.fidelity)
-  const segments = fidelity === 'low' ? 140 : 220
+  const segments = fidelity === 'low' ? 240 : 400
 
   return (
     <>
-      {/* Warm low sun, plus a strong sky fill so shadowed slopes keep their colour. */}
-      <hemisphereLight args={['#d6e6f5', '#9a8f63', 2]} />
-      <ambientLight intensity={0.5} />
-      <directionalLight
-        position={SUN.toArray()}
-        intensity={2}
-        color="#ffd9a0"
-        castShadow
-      />
+      <Sky sunDirection={SUN} />
 
-      {/* Atmospheric haze. Distance fades to the sky colour, which sells depth. */}
-      <fogExp2 attach="fog" args={['#e8dcc4', 0.0032]} />
-      <color attach="background" args={['#e8dcc4']} />
+      {/* Cool sky fill plus warm sun, so shadowed faces keep colour. */}
+      <hemisphereLight args={['#bcd4ea', '#6d6550', 1.4]} />
+      <directionalLight position={SUN.toArray()} intensity={2.2} color="#ffdcaa" />
+
+      {/* Fog matches the sky horizon, so distant peaks dissolve into it. */}
+      <fogExp2 attach="fog" args={[HORIZON_COLOUR.getHex(), 0.0016]} />
 
       <Terrain segments={segments} />
 
-      {/* Museum placeholder, sitting on the summit. */}
-      <mesh position={[SUMMIT.x, terrainHeight(SUMMIT.x, SUMMIT.z) + 3, SUMMIT.z]} castShadow>
-        <boxGeometry args={[10, 6, 8]} />
+      {/* Museum placeholder on its summit. */}
+      <mesh position={[SUMMIT.x, terrainHeight(SUMMIT.x, SUMMIT.z) + 6, SUMMIT.z]}>
+        <boxGeometry args={[26, 12, 20]} />
         <meshStandardMaterial color="#d8cbb4" roughness={0.9} />
       </mesh>
 
       <CameraRig />
 
       {/*
-        The terrain is a finite plane, so it is hollow from behind and from below.
-        These limits keep the camera on the near side and above the horizon, which
-        also matches the design: a held shot with slow drift, never free flight.
+        Full 360 degree rotation. The terrain surrounds the viewpoint and the
+        perimeter rises into distant peaks, so there is no hollow side to find.
+        Only the vertical angle is limited, to keep the camera above ground.
       */}
       <OrbitControls
-        target={[SUMMIT.x, terrainHeight(SUMMIT.x, SUMMIT.z), SUMMIT.z]}
+        target={[VIEWPOINT.x, terrainHeight(VIEWPOINT.x, VIEWPOINT.z) + 40, VIEWPOINT.z]}
         enablePan={false}
-        minDistance={40}
-        maxDistance={130}
-        minPolarAngle={Math.PI * 0.28}
-        maxPolarAngle={Math.PI * 0.49}
-        minAzimuthAngle={-Math.PI * 0.22}
-        maxAzimuthAngle={Math.PI * 0.22}
+        minDistance={5}
+        maxDistance={260}
+        minPolarAngle={Math.PI * 0.12}
+        maxPolarAngle={Math.PI * 0.495}
       />
     </>
   )
