@@ -37,7 +37,22 @@ export default function Scene() {
       </mesh>
 
       <CameraRig />
-      <OrbitControls target={[SUMMIT.x, terrainHeight(SUMMIT.x, SUMMIT.z), SUMMIT.z]} />
+
+      {/*
+        The terrain is a finite plane, so it is hollow from behind and from below.
+        These limits keep the camera on the near side and above the horizon, which
+        also matches the design: a held shot with slow drift, never free flight.
+      */}
+      <OrbitControls
+        target={[SUMMIT.x, terrainHeight(SUMMIT.x, SUMMIT.z), SUMMIT.z]}
+        enablePan={false}
+        minDistance={40}
+        maxDistance={130}
+        minPolarAngle={Math.PI * 0.28}
+        maxPolarAngle={Math.PI * 0.49}
+        minAzimuthAngle={-Math.PI * 0.22}
+        maxAzimuthAngle={Math.PI * 0.22}
+      />
     </>
   )
 }
