@@ -68,8 +68,13 @@ function ridged(x: number, z: number, octaves = 6): number {
 /** World size of the terrain, in units. */
 export const TERRAIN_SIZE = 700
 
-/** Where the camera stands, on the open hillside. */
-export const VIEWPOINT = { x: 0, z: 40, eyeHeight: 6 }
+/**
+ * Where the camera stands, on the open hillside.
+ *
+ * Set back from the shore, so there is hillside in the foreground and the water
+ * sits in the middle distance rather than at the camera's feet.
+ */
+export const VIEWPOINT = { x: 0, z: 150, eyeHeight: 6 }
 
 /** The rise that carries the museum. */
 export const SUMMIT = { x: 34, z: -90 }
