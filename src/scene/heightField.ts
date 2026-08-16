@@ -72,21 +72,21 @@ function softRise(x: number, z: number, cx: number, cz: number, spread: number, 
 export const TERRAIN_SIZE = 700
 
 /**
- * Natural hill under the camera. Same soft shape as the other rises — not a
- * flat plateau or a cliff.
+ * Broad inland shoulder under the camera. Wide on purpose: a tight gaussian
+ * reads as a cone in a bowl, not as a hillside.
  *
  * Fixed in the world so moving the camera does not move the landform.
  */
-export const HILL = { x: 0, z: 100, spread: 9800, height: 44 }
+export const HILL = { x: 0, z: 70, spread: 36000, height: 30 }
 
 /**
  * Crest of the hill, a short step seaward of the peak so the view looks down
  * the slope toward the water.
  */
-export const VIEWPOINT = { x: 0, z: 86, eyeHeight: 5 }
+export const VIEWPOINT = { x: 0, z: 56, eyeHeight: 5 }
 
-/** The rise that carries the museum. */
-export const SUMMIT = { x: 34, z: -90 }
+/** The rise that carries the museum. A shoulder on the slope, not a cone. */
+export const SUMMIT = { x: 40, z: -70 }
 
 /** Height of the ocean surface. Land is measured against this. */
 export const SEA_LEVEL = 0
@@ -115,15 +115,16 @@ export function terrainHeight(x: number, z: number): number {
   // 1. Rolling hills. Low amplitude, broad wavelength.
   const hills = ridged(x * 0.004 + 17, z * 0.004 + 17, 4) * 34
 
-  // 2. Far hills. Rise at the perimeter to close the horizon. They fade out
-  //    toward the coast, which opens the view to the water.
-  const rimStart = TERRAIN_SIZE * 0.26
-  const rimEnd = TERRAIN_SIZE * 0.5
+  // 2. Far hills. Rise at the perimeter to close the horizon. They start
+  //    close enough to meet the inland shoulder, so no trough (crater) forms.
+  //    They fade out toward the coast, which opens the view to the water.
+  const rimStart = TERRAIN_SIZE * 0.16
+  const rimEnd = TERRAIN_SIZE * 0.48
   const rimT = Math.min(1, Math.max(0, (distance - rimStart) / (rimEnd - rimStart)))
-  const rim = smooth(rimT) * 70 * (1 - sea)
+  const rim = smooth(rimT) * 48 * (1 - sea)
 
-  // 3. Museum rise.
-  const summit = softRise(x, z, SUMMIT.x, SUMMIT.z, 5200, 46)
+  // 3. Museum rise. Wide and low, so it reads as a fold in the slope.
+  const summit = softRise(x, z, SUMMIT.x, SUMMIT.z, 16000, 24)
 
   // 4. Camera hill. Soft gaussian — same language as the rest of the land.
   const hill = softRise(x, z, HILL.x, HILL.z, HILL.spread, HILL.height)
