@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { SEA_LEVEL } from '../heightField'
-import { HORIZON_COLOUR } from '../sky/Sky'
+import { HORIZON_COLOUR } from '../palette.ts'
 import fragmentShader from './shaders/fragment.frag'
 import vertexShader from './shaders/vertex.vert'
 
