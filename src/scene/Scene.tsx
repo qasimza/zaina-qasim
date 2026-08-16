@@ -1,9 +1,10 @@
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import CameraRig, { lookTarget } from './CameraRig'
-import Ocean from './Ocean'
-import Sky, { HORIZON_COLOUR } from './Sky'
-import Terrain from './Terrain'
+import Ocean from './ocean/Ocean'
+import { HORIZON_COLOUR } from './palette.ts'
+import Sky from './sky/Sky'
+import Terrain from './terrain/Terrain'
 import { useRenderStore } from '../store/renderStore'
 
 /** Low sun, raking across the hills from the left. */
