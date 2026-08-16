@@ -1,30 +1,3 @@
-import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
-import * as THREE from 'three'
-import { SEA_LEVEL } from './heightField'
-import { HORIZON_COLOUR } from './Sky'
-
-/**
- * Ocean surface.
- *
- * A flat plane, not simulated geometry. The movement lives entirely in the
- * shader: two crossing wave fields perturb the normal, which drives both the
- * sun glitter and how much sky reflects. That is cheap, because the cost is one
- * plane regardless of how detailed the water looks.
- */
-const vertexShader = /* glsl */ `
-varying vec2 vWorldXZ;
-varying vec3 vWorldPosition;
-
-void main() {
-  vec4 world = modelMatrix * vec4(position, 1.0);
-  vWorldPosition = world.xyz;
-  vWorldXZ = world.xz;
-  gl_Position = projectionMatrix * viewMatrix * world;
-}
-`
-
-const fragmentShader = /* glsl */ `
 uniform float uTime;
 uniform vec3 uShallow;
 uniform vec3 uDeep;
@@ -118,47 +91,4 @@ void main() {
   colour = mix(colour, uFogColour, clamp(fog, 0.0, 0.82));
 
   gl_FragColor = vec4(colour, 1.0);
-}
-`
-
-interface Props {
-  sunDirection: THREE.Vector3
-  fogDensity: number
-  size?: number
-}
-
-export default function Ocean({ sunDirection, fogDensity, size = 6000 }: Props) {
-  const materialRef = useRef<THREE.ShaderMaterial>(null)
-
-  const uniforms = useMemo(
-    () => ({
-      uTime: { value: 0 },
-      uShallow: { value: new THREE.Color('#4d94a6') },
-      uDeep: { value: new THREE.Color('#1f4e63') },
-      uSkyColour: { value: new THREE.Color('#9fc4dd') },
-      uSunColour: { value: new THREE.Color('#ffdcaa') },
-      uSunDirection: { value: sunDirection.clone().normalize() },
-      uFogColour: { value: HORIZON_COLOUR },
-      uFogDensity: { value: fogDensity },
-    }),
-    [sunDirection, fogDensity],
-  )
-
-  useFrame((state) => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.uTime.value = state.clock.elapsedTime
-    }
-  })
-
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, SEA_LEVEL, -400]}>
-      <planeGeometry args={[size, size]} />
-      <shaderMaterial
-        ref={materialRef}
-        vertexShader={vertexShader}
-        fragmentShader={fragmentShader}
-        uniforms={uniforms}
-      />
-    </mesh>
-  )
 }
